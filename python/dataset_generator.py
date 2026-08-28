@@ -18,11 +18,12 @@ import os
 # Equilibrium Moisture Content (EMC) parameters using modified Oswin equation
 # EMC = (A + B*T) * (RH / (100 - RH))^(1/C)
 EMC_PARAMS = {
-    "PADDY":   {"A": 11.5, "B": -0.045, "C": 2.65, "safe_max_temp": 42.0, "target_moist": 13.0, "initial_range": (20.0, 26.0)},
-    "WHEAT":   {"A": 10.8, "B": -0.040, "C": 2.50, "safe_max_temp": 40.0, "target_moist": 12.0, "initial_range": (18.0, 24.0)},
-    "MAIZE":   {"A": 12.0, "B": -0.050, "C": 2.70, "safe_max_temp": 43.0, "target_moist": 13.5, "initial_range": (22.0, 28.0)},
-    "SOYBEAN": {"A": 8.5,  "B": -0.035, "C": 2.20, "safe_max_temp": 38.0, "target_moist": 11.0, "initial_range": (16.0, 22.0)},
-    "MUSTARD": {"A": 6.8,  "B": -0.028, "C": 1.95, "safe_max_temp": 36.0, "target_moist": 8.5,  "initial_range": (14.0, 19.0)},
+    "PADDY":     {"A": 11.5, "B": -0.045, "C": 2.65, "safe_max_temp": 42.0, "target_moist": 13.0, "initial_range": (20.0, 26.0)},
+    "GROUNDNUT": {"A": 7.2,  "B": -0.030, "C": 2.05, "safe_max_temp": 36.0, "target_moist": 9.0,  "initial_range": (15.0, 20.0)},
+    "WHEAT":     {"A": 10.8, "B": -0.040, "C": 2.50, "safe_max_temp": 40.0, "target_moist": 12.0, "initial_range": (18.0, 24.0)},
+    "MAIZE":     {"A": 12.0, "B": -0.050, "C": 2.70, "safe_max_temp": 43.0, "target_moist": 13.5, "initial_range": (22.0, 28.0)},
+    "SOYBEAN":   {"A": 8.5,  "B": -0.035, "C": 2.20, "safe_max_temp": 38.0, "target_moist": 11.0, "initial_range": (16.0, 22.0)},
+    "MUSTARD":   {"A": 6.8,  "B": -0.028, "C": 1.95, "safe_max_temp": 36.0, "target_moist": 8.5,  "initial_range": (14.0, 19.0)},
 }
 
 def calculate_emc(seed_type: str, temp_c: float, rh_pct: float) -> float:
