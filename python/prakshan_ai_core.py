@@ -38,11 +38,12 @@ class PrakashanAICore:
             # Embedded default parameters
             return {
                 "seed_profiles": {
-                    "PADDY":   {"safe_max_temp": 42.0, "target_moist": 13.0, "A": 11.5, "B": -0.045, "C": 2.65},
-                    "WHEAT":   {"safe_max_temp": 40.0, "target_moist": 12.0, "A": 10.8, "B": -0.040, "C": 2.50},
-                    "MAIZE":   {"safe_max_temp": 43.0, "target_moist": 13.5, "A": 12.0, "B": -0.050, "C": 2.70},
-                    "SOYBEAN": {"safe_max_temp": 38.0, "target_moist": 11.0, "A": 8.5,  "B": -0.035, "C": 2.20},
-                    "MUSTARD": {"safe_max_temp": 36.0, "target_moist": 8.5,  "A": 6.8,  "B": -0.028, "C": 1.95},
+                    "PADDY":     {"safe_max_temp": 42.0, "target_moist": 13.0, "A": 11.5, "B": -0.045, "C": 2.65},
+                    "GROUNDNUT": {"safe_max_temp": 36.0, "target_moist": 9.0,  "A": 7.2,  "B": -0.030, "C": 2.05},
+                    "WHEAT":     {"safe_max_temp": 40.0, "target_moist": 12.0, "A": 10.8, "B": -0.040, "C": 2.50},
+                    "MAIZE":     {"safe_max_temp": 43.0, "target_moist": 13.5, "A": 12.0, "B": -0.050, "C": 2.70},
+                    "SOYBEAN":   {"safe_max_temp": 38.0, "target_moist": 11.0, "A": 8.5,  "B": -0.035, "C": 2.20},
+                    "MUSTARD":   {"safe_max_temp": 36.0, "target_moist": 8.5,  "A": 6.8,  "B": -0.028, "C": 1.95},
                 }
             }
 
