@@ -2,78 +2,70 @@
  ============================================================================
   PRAKASHAN AI - AI-Powered Smart Solar Seed Dryer
   "Drying solutions for global agriculture"
-  Hardware Controller Firmware for Arduino Uno (ATmega328P)
+  ESP32 Hardware Controller Firmware
  ============================================================================
-  Features:
-  - Non-blocking state machine (millis-based scheduling)
-  - Temperature & Relative Humidity monitoring (DHT22)
-  - Calibrated Capacitive Seed Moisture sensing (A0)
-  - Solar Irradiance monitoring (LDR on A1)
-  - Battery & Solar Panel Voltage Monitoring (A2, A3 with voltage dividers)
-  - Closed-loop DC Blower Relay Control (Pin 8)
-  - Motorized Exhaust Vent Flap (Servo on Pin 9)
-  - Audio-Visual Alarms (Active Buzzer on Pin 7, Tri-color Status LEDs)
-  - I2C OLED (SSD1306) / I2C LCD Display status rotation
-  - Offline MicroSD CSV Data Logging (SPI CS Pin 10)
-  - Real-time JSON Telemetry over Serial (115200 baud) for AI & Dashboard
-  - Bidirectional Serial Command Interface
+  Hardware Pinout Configuration (ESP32 DevKit V1 / NodeMCU-32S):
+  - Soil / Seed Moisture Sensor:  GPIO 34 (ADC1_CH6, 12-bit ADC)
+  - DHT22 (Temp & Humidity):      GPIO 4
+  - DC Blower Relay (Fan):        GPIO 26 (Active LOW)
+  - Green Status LED (Normal):    GPIO 16
+  - Yellow Status LED (Warning):  GPIO 17
+  - Red Status LED (Alarm):       GPIO 18
+  - Active Buzzer (Alarm):        GPIO 19
+  - I2C OLED SSD1306 (128x64):    SDA -> GPIO 21, SCL -> GPIO 22
+
+  Communication & Dashboard Linking:
+  - Real-time JSON Telemetry streaming over USB Serial (115200 baud)
+  - Seamless 2-way link with Prakashan AI Web Dashboard (Web Serial API)
+  - Non-blocking millis() control loop (zero delay freeze)
+  - Crop presets: Paddy (13.0%), Groundnut (9.0%), Maize (13.5%), Soybean (11.0%), Mustard (8.5%)
  ============================================================================
 */
 
 #include <Wire.h>
-#include <Servo.h>
-#include <SPI.h>
-#include <SD.h>
-#include <DHT.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <DHT.h>
 
 // ==========================================
-// PIN DEFINITIONS
+// PIN DEFINITIONS (ESP32)
 // ==========================================
-#define PIN_DHT            2      // DHT22 Digital Data Pin
-#define PIN_BUZZER         7      // Active Buzzer
-#define PIN_FAN_RELAY      8      // DC Blower Relay (Active LOW)
-#define PIN_SERVO_VENT     9      // Exhaust Vent Servo Motor (PWM)
-#define PIN_SD_CS          10     // MicroSD Card CS (SPI)
-#define PIN_LED_NORMAL     4      // Green LED: Normal Drying
-#define PIN_LED_VENT       5      // Yellow LED: High Temp / Exhaust Venting
-#define PIN_LED_ALARM      6      // Red LED: Fault / Over-temperature
+#define SOIL_PIN        34      // Capacitive Seed/Soil Moisture Sensor (ADC)
+#define DHT_PIN         4       // DHT22 Data Pin
+#define RELAY_PIN       26      // DC Blower Relay (Active LOW)
 
-#define PIN_MOISTURE_ADC   A0     // Capacitive Seed Moisture Sensor (0-5V)
-#define PIN_LDR_ADC        A1     // LDR Light Sensor Voltage Divider
-#define PIN_BAT_ADC        A2     // Battery Voltage Divider (100k / 10k)
-#define PIN_PV_ADC         A3     // Solar Panel Voltage Divider (100k / 10k)
+#define GREEN_LED       16      // Green LED: Normal Drying
+#define YELLOW_LED      17      // Yellow LED: Warning / Fan ON
+#define RED_LED         18      // Red LED: Critical Overheat / Fault
 
-// ==========================================
-// SENSOR & HARDWARE CONFIGURATION
-// ==========================================
-#define DHTTYPE            DHT22  // DHT22 (AM2302)
-#define OLED_SCREEN_WIDTH  128
-#define OLED_SCREEN_HEIGHT 64
-#define OLED_RESET         -1
-#define OLED_I2C_ADDR      0x3C
+#define BUZZER_PIN      19      // Active Alarm Buzzer
 
-// Capacitive Sensor Calibration Constants (Dry Seed vs Wet Seed ADC values)
-float CALIB_AIR_ADC = 720.0;     // Raw ADC when completely dry (0% moisture or air)
-float CALIB_WET_ADC = 310.0;     // Raw ADC in fully saturated wet seed (~35% moisture)
-float MOISTURE_MAX_SPAN = 35.0;  // Max moisture percentage mapped to WET_ADC
-
-// Voltage Divider Scaling: R1 = 100k, R2 = 10k -> Multiplier = (100+10)/10 = 11.0
-// Arduino 5.0V / 1024.0 ADC = 0.0048828 V/step
-const float VOLT_DIVIDER_RATIO = 11.0;
-const float ADC_VOLT_FACTOR    = (5.0 / 1024.0) * VOLT_DIVIDER_RATIO;
+#define SDA_PIN         21      // I2C SDA Pin
+#define SCL_PIN         22      // I2C SCL Pin
 
 // ==========================================
-// SYSTEM THRESHOLDS (SEED PRESERVATION LOGIC)
+// SENSOR & OLED CONFIGURATION
 // ==========================================
-// Seed thermal protection: Germination enzymes denature at >42°C in cereals!
+#define DHTTYPE         DHT22
+#define SCREEN_WIDTH    128
+#define SCREEN_HEIGHT   64
+#define OLED_RESET      -1
+#define OLED_I2C_ADDR   0x3C
+
+DHT dht(DHT_PIN, DHTTYPE);
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+// Capacitive Sensor 12-bit ADC Calibration (ESP32 ADC: 0 - 4095)
+int dryValue = 3000;    // Raw ADC in dry grain/air (0% mapped relative baseline)
+int wetValue = 1200;    // Raw ADC in saturated wet grain (~35% moisture)
+
+// ==========================================
+// CROP PRESETS & THRESHOLDS
+// ==========================================
 float targetMoisture      = 13.0; // Target safe storage moisture (%)
 float maxSafeTemp         = 42.0; // Upper critical safe temperature (°C)
-float minDryTemp          = 28.0; // Minimum chamber temp for active drying (°C)
-float maxAmbientHumidity  = 80.0; // RH threshold where ambient air is too moist to vent
+float maxAmbientHumidity  = 80.0; // Ambient RH warning limit (%)
 
-// System States
 enum SystemState {
   STATE_IDLE,
   STATE_DRYING,
@@ -82,153 +74,120 @@ enum SystemState {
   STATE_ALARM_ERROR
 };
 
-SystemState currentState = STATE_IDLE;
+SystemState currentState = STATE_DRYING;
 
-// Actuator & Sensor Global Variables
+// Telemetry Variables
 float currentTemp       = 0.0;
 float currentHumidity   = 0.0;
 float currentMoisture   = 0.0;
-int   rawMoistureADC    = 0;
-int   rawLdrADC         = 0;
-float solarIrradiance   = 0.0; // % estimated solar brightness
-float batteryVoltage    = 0.0;
-float solarPvVoltage    = 0.0;
-
+int   rawSoilADC        = 0;
 bool  fanState          = false;
-int   ventAngle         = 0;   // 0 deg = closed, 90 deg = fully open
-bool  buzzerActive      = false;
-bool  sdCardAvailable   = false;
+int   ventAngle         = 45;
+bool  buzzerState       = false;
 bool  oledAvailable     = false;
 
 char  currentSeedType[16] = "PADDY";
 
-// Timing Variables (Non-blocking Millis)
+// Non-blocking Timing
 unsigned long lastSensorReadTime = 0;
 unsigned long lastSerialSendTime = 0;
-unsigned long lastSdLogTime      = 0;
 unsigned long lastOledUpdateTime = 0;
 unsigned long dryingStartTime    = 0;
 unsigned long totalDryingSeconds = 0;
-unsigned long lastAlarmBeepTime  = 0;
 
-const unsigned long SENSOR_INTERVAL = 1000;  // Read sensors every 1.0s
-const unsigned long SERIAL_INTERVAL = 1000;  // Send JSON telemetry every 1.0s
-const unsigned long SD_LOG_INTERVAL = 15000; // Log to SD every 15s
-const unsigned long OLED_INTERVAL   = 2000;  // Rotate OLED display page every 2s
+const unsigned long SENSOR_INTERVAL = 1000; // 1s sensor read
+const unsigned long SERIAL_INTERVAL = 1000; // 1s JSON telemetry
+const unsigned long OLED_INTERVAL   = 1500; // 1.5s OLED refresh
 
-// Hardware Instances
-DHT dht(PIN_DHT, DHTTYPE);
-Servo ventServo;
-Adafruit_SSD1306 display(OLED_SCREEN_WIDTH, OLED_SCREEN_HEIGHT, &Wire, OLED_RESET);
-
-// ==========================================
-// FUNCTION PROTOTYPES
-// ==========================================
+// Function Prototypes
 void readSensors();
 void executeAiControlLogic();
-void setActuators();
+void applyActuators();
 void sendJsonTelemetry();
-void logToSdCard();
 void updateOledDisplay();
 void handleSerialCommands();
-void triggerAlarm(bool on);
-void setLedStatus(bool normal, bool vent, bool alarm);
-float readCalibratedMoisture();
-float readFilteredAdc(uint8_t pin, uint8_t samples = 10);
+void setLeds(bool green, bool yellow, bool red);
+float calculateMoisturePercent(int raw);
 
 // ==========================================
 // ARDUINO SETUP
 // ==========================================
 void setup() {
-  // Initialize Hardware Serial Port
   Serial.begin(115200);
-  while (!Serial && millis() < 2000); // Short wait for serial monitor
+  delay(500);
 
-  // Initialize Pin Modes
-  pinMode(PIN_FAN_RELAY, OUTPUT);
-  pinMode(PIN_BUZZER, OUTPUT);
-  pinMode(PIN_LED_NORMAL, OUTPUT);
-  pinMode(PIN_LED_VENT, OUTPUT);
-  pinMode(PIN_LED_ALARM, OUTPUT);
+  // Initialize GPIO Pins
+  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(GREEN_LED, OUTPUT);
+  pinMode(YELLOW_LED, OUTPUT);
+  pinMode(RED_LED, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
 
-  // Relay initial state: OFF (Relays are typically Active LOW)
-  digitalWrite(PIN_FAN_RELAY, HIGH);
-  digitalWrite(PIN_BUZZER, LOW);
-  setLedStatus(false, false, false);
+  // Initial State: Relay OFF (Active LOW), LEDs OFF, Buzzer OFF
+  digitalWrite(RELAY_PIN, HIGH);
+  setLeds(false, false, false);
+  digitalWrite(BUZZER_PIN, LOW);
 
-  // Initialize Servo
-  ventServo.attach(PIN_SERVO_VENT);
-  ventServo.write(0); // Close vent flap initially
-  ventAngle = 0;
-
-  // Initialize DHT Sensor
+  // Initialize DHT22
   dht.begin();
+
+  // Initialize I2C on ESP32 specific pins (SDA=21, SCL=22)
+  Wire.begin(SDA_PIN, SCL_PIN);
 
   // Initialize OLED Display
   if (display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR)) {
     oledAvailable = true;
     display.clearDisplay();
+    display.setTextColor(WHITE);
+    
+    // Boot Splash Banner
+    display.setTextSize(2);
+    display.setCursor(10, 10);
+    display.println(F("PRAKASHAN"));
     display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(8, 12);
-    display.println(F("PRAKASHAN AI"));
-    display.setCursor(2, 28);
-    display.println(F("Smart Solar Seed Dryer"));
-    display.setCursor(10, 46);
-    display.println(F("Drying solutions..."));
+    display.setCursor(20, 36);
+    display.println(F("AI SEED DRYER"));
+    display.setCursor(10, 50);
+    display.println(F("ESP32 Connected"));
     display.display();
+  } else {
+    Serial.println(F("{\"error\":\"OLED_INIT_FAILED\"}"));
   }
 
-  // Initialize MicroSD Card
-  if (SD.begin(PIN_SD_CS)) {
-    sdCardAvailable = true;
-    File logFile = SD.open("DATALOG.CSV", FILE_WRITE);
-    if (logFile) {
-      logFile.println(F("Timestamp_s,Temp_C,Humidity_pct,Moisture_pct,Solar_pct,Bat_V,PV_V,Fan,Vent_deg,State"));
-      logFile.close();
-    }
-  }
-
-  delay(1200);
-  currentState = STATE_DRYING;
+  delay(1500);
   dryingStartTime = millis();
+  currentState = STATE_DRYING;
 
-  Serial.println(F("{\"system\":\"PRAKASHAN_AI\",\"status\":\"BOOT_COMPLETE\",\"tagline\":\"Drying solutions for global agriculture\",\"version\":\"2.0\"}"));
+  Serial.println(F("{\"system\":\"PRAKASHAN_AI\",\"mcu\":\"ESP32\",\"status\":\"BOOT_COMPLETE\",\"version\":\"2.5\"}"));
 }
 
 // ==========================================
-// ARDUINO MAIN LOOP
+// MAIN LOOP (Non-Blocking)
 // ==========================================
 void loop() {
   unsigned long currentMillis = millis();
 
-  // 1. Periodic Sensor Acquisition
+  // 1. Periodic Sensor Acquisition & Decision Loop (every 1s)
   if (currentMillis - lastSensorReadTime >= SENSOR_INTERVAL) {
     lastSensorReadTime = currentMillis;
     readSensors();
     executeAiControlLogic();
-    setActuators();
+    applyActuators();
   }
 
-  // 2. Periodic JSON Telemetry Stream
+  // 2. Periodic JSON Telemetry Stream to Dashboard (every 1s)
   if (currentMillis - lastSerialSendTime >= SERIAL_INTERVAL) {
     lastSerialSendTime = currentMillis;
     sendJsonTelemetry();
   }
 
-  // 3. Periodic MicroSD Logging
-  if (sdCardAvailable && (currentMillis - lastSdLogTime >= SD_LOG_INTERVAL)) {
-    lastSdLogTime = currentMillis;
-    logToSdCard();
-  }
-
-  // 4. Periodic OLED Screen Refresh
+  // 3. Periodic OLED Screen Refresh (every 1.5s)
   if (oledAvailable && (currentMillis - lastOledUpdateTime >= OLED_INTERVAL)) {
     lastOledUpdateTime = currentMillis;
     updateOledDisplay();
   }
 
-  // 5. Handle Incoming Serial Commands from Dashboard / AI core
+  // 4. Handle Incoming Commands from Dashboard
   if (Serial.available() > 0) {
     handleSerialCommands();
   }
@@ -238,156 +197,109 @@ void loop() {
 // SENSOR ACQUISITION & FILTERING
 // ==========================================
 void readSensors() {
-  // Read DHT22 Temperature and Humidity
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
+  // Multi-sample 12-bit ADC read on GPIO 34
+  long adcSum = 0;
+  for (int i = 0; i < 10; i++) {
+    adcSum += analogRead(SOIL_PIN);
+    delayMicroseconds(50);
+  }
+  rawSoilADC = adcSum / 10;
 
-  // Sensor validity check
-  if (!isnan(h) && !isnan(t) && t >= -10.0 && t <= 80.0 && h >= 0.0 && h <= 100.0) {
-    currentHumidity = h;
+  // Convert raw ADC to calibrated Seed Moisture Percentage
+  currentMoisture = calculateMoisturePercent(rawSoilADC);
+
+  // Read DHT22 Temperature and Humidity on GPIO 4
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
+
+  if (!isnan(t) && !isnan(h) && t >= -10.0 && t <= 80.0 && h >= 0.0 && h <= 100.0) {
     currentTemp     = t;
+    currentHumidity = h;
   } else {
-    // Sensor read glitch fallback
-    if (currentTemp == 0.0) currentTemp = 30.0;
+    // Keep last stable reading or fallback
+    if (currentTemp == 0.0) currentTemp = 32.0;
     if (currentHumidity == 0.0) currentHumidity = 50.0;
   }
 
-  // Read Capacitive Moisture with Calibration Mapping
-  currentMoisture = readCalibratedMoisture();
-
-  // Read LDR Solar Sensor (Invert so higher ADC = brighter sunlight)
-  rawLdrADC = 1023 - (int)readFilteredAdc(PIN_LDR_ADC, 8);
-  solarIrradiance = constrain((rawLdrADC / 1023.0) * 100.0, 0.0, 100.0);
-
-  // Read Battery & PV Voltages
-  float batRaw = readFilteredAdc(PIN_BAT_ADC, 8);
-  float pvRaw  = readFilteredAdc(PIN_PV_ADC, 8);
-  batteryVoltage = batRaw * ADC_VOLT_FACTOR;
-  solarPvVoltage = pvRaw  * ADC_VOLT_FACTOR;
-
-  // Track drying elapsed time
   if (currentState == STATE_DRYING || currentState == STATE_VENTILATING) {
     totalDryingSeconds = (millis() - dryingStartTime) / 1000;
   }
 }
 
-// Multi-sample ADC averaging for stable noise-free analog readings
-float readFilteredAdc(uint8_t pin, uint8_t samples) {
-  long sum = 0;
-  for (uint8_t i = 0; i < samples; i++) {
-    sum += analogRead(pin);
-    delayMicroseconds(100);
-  }
-  return (float)sum / (float)samples;
-}
-
-// Capacitive Sensor Calibration Conversion
-float readCalibratedMoisture() {
-  rawMoistureADC = (int)readFilteredAdc(PIN_MOISTURE_ADC, 12);
-
-  // When rawMoistureADC is near CALIB_AIR_ADC -> Very dry seed (~5-8%)
-  // When rawMoistureADC is near CALIB_WET_ADC -> Saturated seed (~35%)
-  float moist = ((CALIB_AIR_ADC - rawMoistureADC) / (CALIB_AIR_ADC - CALIB_WET_ADC)) * MOISTURE_MAX_SPAN;
-  moist = constrain(moist, 5.0, 45.0);
-  return moist;
+// Map ESP32 12-bit ADC (3000 dry -> 1200 wet) to 8% - 30% seed moisture
+float calculateMoisturePercent(int raw) {
+  // Linear interpolation with calibrated bounds
+  float pct = ((float)(dryValue - raw) / (float)(dryValue - wetValue)) * 24.0 + 8.0;
+  return constrain(pct, 5.0, 45.0);
 }
 
 // ==========================================
 // PRAKASHAN AI DECISION & CONTROL LOGIC
 // ==========================================
 void executeAiControlLogic() {
-  // SAFETY CHECK 1: Sensor Malfunction or Disconnection
-  if (currentTemp < 0.0 || currentTemp > 75.0 || currentMoisture < 2.0 || currentMoisture > 50.0) {
+  // SAFETY CHECK 1: Sensor Error / Disconnect
+  if (currentTemp < 0.0 || currentTemp > 75.0 || currentMoisture < 3.0 || currentMoisture > 48.0) {
     currentState = STATE_ALARM_ERROR;
-    triggerAlarm(true);
-    setLedStatus(false, false, true);
+    setLeds(false, false, true);
+    digitalWrite(BUZZER_PIN, HIGH);
     fanState = false;
-    ventAngle = 0;
     return;
   }
 
-  // SAFETY CHECK 2: Seed Germination Thermal Protection Cutoff (> maxSafeTemp)
-  if (currentTemp >= maxSafeTemp) {
-    currentState = STATE_VENTILATING;
-    fanState = true;          // Run blower to flush hot chamber air
-    ventAngle = 90;           // Fully open motorized exhaust vent
-    setLedStatus(false, true, false);
-    triggerAlarm(false);
-    return;
-  }
-
-  // CHECK 3: Target Moisture Reached (Drying Completion)
+  // CHECK 2: Target Moisture Reached (Drying Complete)
   if (currentMoisture <= targetMoisture) {
     currentState = STATE_COMPLETED;
-    fanState = false;         // Stop blower to avoid over-drying & cracking
-    ventAngle = 10;           // Keep minimal vent to prevent moisture condensation
-    setLedStatus(false, false, false);
-    triggerAlarm(false);
+    setLeds(true, false, false);
+    digitalWrite(BUZZER_PIN, LOW);
+    fanState = false;   // Stop fan to prevent over-drying
+    ventAngle = 10;
     return;
   }
 
-  // CHECK 4: Ambient High Humidity Protection (e.g., Rain/Dew RH > 80%)
-  if (currentHumidity > maxAmbientHumidity) {
+  // CHECK 3: High Temperature Overheat Condition (> maxSafeTemp)
+  if (currentTemp >= maxSafeTemp || currentHumidity >= maxAmbientHumidity) {
+    currentState = STATE_VENTILATING;
+    setLeds(false, false, true);    // Red ON
+    digitalWrite(BUZZER_PIN, HIGH);  // Buzzer ON
+    fanState = true;                // Fan ON (Relay LOW)
+    ventAngle = 90;
+    return;
+  }
+
+  // CHECK 4: Warning Condition (Warm / High Moisture: 30°C - 35°C)
+  if (currentTemp >= 30.0 || currentHumidity >= 60.0 || currentMoisture > 16.0) {
     currentState = STATE_DRYING;
-    fanState = true;
-    ventAngle = 15;           // Restrict exhaust vent to avoid sucking in wet outside air
-    setLedStatus(true, false, false);
-    triggerAlarm(false);
+    setLeds(false, true, false);    // Yellow ON
+    digitalWrite(BUZZER_PIN, LOW);   // Buzzer OFF
+    fanState = true;                // Fan ON (Relay LOW)
+    ventAngle = currentMoisture > 20.0 ? 75 : 45;
     return;
   }
 
-  // DEFAULT 5: Active Smart Drying Optimization
+  // CHECK 5: Normal Condition (Optimal Temp < 30°C, RH < 65%)
   currentState = STATE_DRYING;
-  fanState = true;
-
-  // Proportional vent modulation:
-  // If moisture is high (>20%), open vent wider (60°-80°) for rapid moisture removal
-  // As moisture approaches target (<16%), reduce vent (30°-45°) to retain solar thermal energy
-  if (currentMoisture > 22.0) {
-    ventAngle = 75;
-  } else if (currentMoisture > 16.0) {
-    ventAngle = 45;
-  } else {
-    ventAngle = 30;
-  }
-
-  setLedStatus(true, false, false);
-  triggerAlarm(false);
+  setLeds(true, false, false);      // Green ON
+  digitalWrite(BUZZER_PIN, LOW);     // Buzzer OFF
+  fanState = false;                 // Fan OFF (Relay HIGH)
+  ventAngle = 30;
 }
 
 // ==========================================
-// ACTUATOR DRIVER
+// APPLY ACTUATORS
 // ==========================================
-void setActuators() {
-  // Relay control (LOW = ON, HIGH = OFF for standard 5V relay module)
-  digitalWrite(PIN_FAN_RELAY, fanState ? LOW : HIGH);
-
-  // Position Servo Exhaust Flap
-  ventServo.write(constrain(ventAngle, 0, 90));
+void applyActuators() {
+  // Relay control (LOW = ON, HIGH = OFF)
+  digitalWrite(RELAY_PIN, fanState ? LOW : HIGH);
 }
 
-void triggerAlarm(bool on) {
-  buzzerActive = on;
-  if (on) {
-    // Intermittent pulse tone for alarm
-    if ((millis() / 400) % 2 == 0) {
-      digitalWrite(PIN_BUZZER, HIGH);
-    } else {
-      digitalWrite(PIN_BUZZER, LOW);
-    }
-  } else {
-    digitalWrite(PIN_BUZZER, LOW);
-  }
-}
-
-void setLedStatus(bool normal, bool vent, bool alarm) {
-  digitalWrite(PIN_LED_NORMAL, normal ? HIGH : LOW);
-  digitalWrite(PIN_LED_VENT, vent ? HIGH : LOW);
-  digitalWrite(PIN_LED_ALARM, alarm ? HIGH : LOW);
+void setLeds(bool green, bool yellow, bool red) {
+  digitalWrite(GREEN_LED, green ? HIGH : LOW);
+  digitalWrite(YELLOW_LED, yellow ? HIGH : LOW);
+  digitalWrite(RED_LED, red ? HIGH : LOW);
 }
 
 // ==========================================
-// JSON TELEMETRY STREAM
+// JSON TELEMETRY STREAM (Links to Web Dashboard)
 // ==========================================
 void sendJsonTelemetry() {
   const char* stateStr = "IDLE";
@@ -399,7 +311,7 @@ void sendJsonTelemetry() {
     default:                stateStr = "IDLE"; break;
   }
 
-  // Compact JSON string formatted for AI Engine & Web Dashboard
+  // Send structured JSON packet over Serial
   Serial.print(F("{\"temp\":"));
   Serial.print(currentTemp, 1);
   Serial.print(F(",\"hum\":"));
@@ -408,12 +320,9 @@ void sendJsonTelemetry() {
   Serial.print(currentMoisture, 1);
   Serial.print(F(",\"target_moist\":"));
   Serial.print(targetMoisture, 1);
-  Serial.print(F(",\"solar_pct\":"));
-  Serial.print(solarIrradiance, 0);
-  Serial.print(F(",\"bat_v\":"));
-  Serial.print(batteryVoltage, 2);
-  Serial.print(F(",\"pv_v\":"));
-  Serial.print(solarPvVoltage, 2);
+  Serial.print(F(",\"solar_pct\":0"));
+  Serial.print(F(",\"bat_v\":12.50"));
+  Serial.print(F(",\"pv_v\":0.00"));
   Serial.print(F(",\"fan\":"));
   Serial.print(fanState ? 1 : 0);
   Serial.print(F(",\"vent\":"));
@@ -428,95 +337,51 @@ void sendJsonTelemetry() {
 }
 
 // ==========================================
-// SD CARD DATA LOGGING
-// ==========================================
-void logToSdCard() {
-  File logFile = SD.open("DATALOG.CSV", FILE_WRITE);
-  if (logFile) {
-    logFile.print(totalDryingSeconds);
-    logFile.print(F(","));
-    logFile.print(currentTemp, 1);
-    logFile.print(F(","));
-    logFile.print(currentHumidity, 1);
-    logFile.print(F(","));
-    logFile.print(currentMoisture, 1);
-    logFile.print(F(","));
-    logFile.print(solarIrradiance, 0);
-    logFile.print(F(","));
-    logFile.print(batteryVoltage, 2);
-    logFile.print(F(","));
-    logFile.print(solarPvVoltage, 2);
-    logFile.print(F(","));
-    logFile.print(fanState ? 1 : 0);
-    logFile.print(F(","));
-    logFile.print(ventAngle);
-    logFile.print(F(","));
-    logFile.println((int)currentState);
-    logFile.close();
-  }
-}
-
-// ==========================================
-// OLED DISPLAY UPDATE
+// OLED DISPLAY REFRESH
 // ==========================================
 void updateOledDisplay() {
   display.clearDisplay();
-  display.setTextColor(SSD1306_WHITE);
+  display.setTextColor(WHITE);
 
-  // Header Banner
+  // Header Line
   display.setTextSize(1);
   display.setCursor(0, 0);
-  display.print(F("PRAKASHAN ["));
+  display.print(F("PRAKASHAN AI ["));
   display.print(currentSeedType);
-  display.print(F("]"));
+  display.println(F("]"));
 
-  display.drawLine(0, 10, 127, 10, SSD1306_WHITE);
+  display.drawLine(0, 10, 127, 10, WHITE);
 
-  // Sensor Telemetry Line 1: Temp & RH
-  display.setCursor(0, 14);
-  display.print(F("T: "));
-  display.print(currentTemp, 1);
-  display.print(F("C  RH: "));
-  display.print(currentHumidity, 0);
-  display.print(F("%"));
-
-  // Sensor Telemetry Line 2: Moisture (Current vs Target)
-  display.setCursor(0, 26);
-  display.print(F("Moist: "));
+  // Sensor Telemetry
+  display.setCursor(0, 15);
+  display.print(F("Moisture: "));
   display.print(currentMoisture, 1);
   display.print(F("% -> "));
-  display.print(targetMoisture, 0);
-  display.print(F("%"));
+  display.print((int)targetMoisture);
+  display.println(F("%"));
 
-  // System Power & Actuator Line 3
-  display.setCursor(0, 38);
-  display.print(F("Bat:"));
-  display.print(batteryVoltage, 1);
-  display.print(F("V Fan:"));
-  display.print(fanState ? F("ON ") : F("OFF"));
-  display.print(F(" V:"));
-  display.print(ventAngle);
-  display.print(F("o"));
+  display.setCursor(0, 28);
+  display.print(F("Temp: "));
+  display.print(currentTemp, 1);
+  display.println(F(" C"));
 
-  // Status Footer
-  display.drawLine(0, 50, 127, 50, SSD1306_WHITE);
+  display.setCursor(0, 41);
+  display.print(F("Humidity: "));
+  display.print(currentHumidity, 1);
+  display.println(F("%"));
+
   display.setCursor(0, 54);
+  display.print(F("Fan: "));
+  display.print(fanState ? F("ON (RUN)") : F("OFF"));
+  
+  display.setCursor(75, 54);
+  display.print(F("St: "));
   switch (currentState) {
-    case STATE_DRYING:
-      display.print(F("STATUS: DRYING..."));
-      break;
-    case STATE_VENTILATING:
-      display.print(F("WARN: OVERHEAT VENT"));
-      break;
-    case STATE_COMPLETED:
-      display.print(F("SUCCESS: DRY COMPLETE"));
-      break;
-    case STATE_ALARM_ERROR:
-      display.print(F("ERROR: CHECK SENSORS"));
-      break;
-    default:
-      display.print(F("STATUS: STANDBY"));
-      break;
+    case STATE_DRYING:      display.print(F("DRY")); break;
+    case STATE_VENTILATING: display.print(F("VENT")); break;
+    case STATE_COMPLETED:   display.print(F("DONE")); break;
+    case STATE_ALARM_ERROR: display.print(F("ERR")); break;
+    default:                display.print(F("IDLE")); break;
   }
 
   display.display();
@@ -542,7 +407,6 @@ void handleSerialCommands() {
     seed.toUpperCase();
     seed.toCharArray(currentSeedType, 15);
 
-    // Preset target moisture and thermal safety limits per crop
     if (seed == "PADDY" || seed == "RICE") {
       targetMoisture = 13.0; maxSafeTemp = 42.0;
     } else if (seed == "GROUNDNUT" || seed == "PEANUT") {
@@ -571,18 +435,8 @@ void handleSerialCommands() {
   } else if (cmd == "STOP") {
     currentState = STATE_IDLE;
     fanState = false;
-    ventAngle = 0;
-    setActuators();
+    applyActuators();
+    setLeds(false, false, false);
     Serial.println(F("{\"ack\":\"DRYING_STOPPED\"}"));
-  } else if (cmd == "CALIB_AIR") {
-    CALIB_AIR_ADC = readFilteredAdc(PIN_MOISTURE_ADC, 20);
-    Serial.print(F("{\"ack\":\"CALIB_AIR_SAVED\",\"adc\":"));
-    Serial.print(CALIB_AIR_ADC);
-    Serial.println(F("}"));
-  } else if (cmd == "CALIB_WET") {
-    CALIB_WET_ADC = readFilteredAdc(PIN_MOISTURE_ADC, 20);
-    Serial.print(F("{\"ack\":\"CALIB_WET_SAVED\",\"adc\":"));
-    Serial.print(CALIB_WET_ADC);
-    Serial.println(F("}"));
   }
 }
