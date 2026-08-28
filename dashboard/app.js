@@ -28,9 +28,9 @@ const appState = {
   temp: 36.8,
   humidity: 48.2,
   moisture: 21.4,
-  solarPct: 84.0,
+  solarPct: 0.0,      // Solar Radiation zero reading as requested
   batVoltage: 12.65,
-  pvVoltage: 18.2,
+  pvVoltage: 0.0,     // 0.0V for zero solar radiation
   fanActive: true,
   ventAngle: 60,
   systemState: "DRYING",
@@ -50,13 +50,13 @@ const appState = {
   historyHum: []
 };
 
-// Seed Configuration Matrix
+// Seed Configuration Matrix (Wheat replaced with Groundnut)
 const CROP_PROFILES = {
-  "PADDY":   { name: "Paddy (Rice)", target: 13.0, maxTemp: 42.0, initialM: 22.5, A: 11.5, B: -0.045, C: 2.65 },
-  "WHEAT":   { name: "Wheat",        target: 12.0, maxTemp: 40.0, initialM: 20.0, A: 10.8, B: -0.040, C: 2.50 },
-  "MAIZE":   { name: "Maize (Corn)", target: 13.5, maxTemp: 43.0, initialM: 24.0, A: 12.0, B: -0.050, C: 2.70 },
-  "SOYBEAN": { name: "Soybean",      target: 11.0, maxTemp: 38.0, initialM: 18.5, A: 8.5,  B: -0.035, C: 2.20 },
-  "MUSTARD": { name: "Mustard",      target: 8.5,  maxTemp: 36.0, initialM: 16.0, A: 6.8,  B: -0.028, C: 1.95 }
+  "PADDY":     { name: "Paddy (Rice)",         target: 13.0, maxTemp: 42.0, initialM: 22.5, A: 11.5, B: -0.045, C: 2.65 },
+  "GROUNDNUT": { name: "Groundnut (Peanut)",   target: 9.0,  maxTemp: 36.0, initialM: 18.0, A: 7.2,  B: -0.030, C: 2.05 },
+  "MAIZE":     { name: "Maize (Corn)",         target: 13.5, maxTemp: 43.0, initialM: 24.0, A: 12.0, B: -0.050, C: 2.70 },
+  "SOYBEAN":   { name: "Soybean",              target: 11.0, maxTemp: 38.0, initialM: 18.5, A: 8.5,  B: -0.035, C: 2.20 },
+  "MUSTARD":   { name: "Mustard",              target: 8.5,  maxTemp: 36.0, initialM: 16.0, A: 6.8,  B: -0.028, C: 1.95 }
 };
 
 // DOM Elements Cache
@@ -123,7 +123,7 @@ let tempHumChartInstance = null;
 // INITIALIZATION
 // ============================================================================
 document.addEventListener("DOMContentLoaded", () => {
-  lucide.createIcons();
+  if (window.lucide) lucide.createIcons();
   initCharts();
   bindEventListeners();
   initSimulationBaseline();
@@ -139,25 +139,25 @@ function initCharts() {
   const chartOptionsBase = {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 400 },
+    animation: { duration: 300 },
     plugins: {
       legend: { display: false },
       tooltip: {
         backgroundColor: "rgba(19, 27, 46, 0.95)",
         borderColor: "rgba(255, 255, 255, 0.1)",
         borderWidth: 1,
-        titleFont: { family: "Plus Jakarta Sans", size: 12 },
-        bodyFont: { family: "JetBrains Mono", size: 11 }
+        titleFont: { family: "Plus Jakarta Sans", size: 11 },
+        bodyFont: { family: "JetBrains Mono", size: 10 }
       }
     },
     scales: {
       x: {
         grid: { color: "rgba(255, 255, 255, 0.05)" },
-        ticks: { color: "#64748b", font: { family: "JetBrains Mono", size: 10 } }
+        ticks: { color: "#64748b", font: { family: "JetBrains Mono", size: 9 }, maxTicksLimit: 6 }
       },
       y: {
         grid: { color: "rgba(255, 255, 255, 0.05)" },
-        ticks: { color: "#64748b", font: { family: "JetBrains Mono", size: 10 } }
+        ticks: { color: "#64748b", font: { family: "JetBrains Mono", size: 9 } }
       }
     }
   };
@@ -174,10 +174,10 @@ function initCharts() {
           data: [],
           borderColor: "#38bdf8",
           backgroundColor: "rgba(56, 189, 248, 0.1)",
-          borderWidth: 2.5,
+          borderWidth: 2,
           tension: 0.35,
           fill: true,
-          pointRadius: 2
+          pointRadius: 1
         },
         {
           label: "Target Safe Moisture (%)",
@@ -219,7 +219,7 @@ function initCharts() {
           borderWidth: 2,
           tension: 0.35,
           yAxisID: "yTemp",
-          pointRadius: 2
+          pointRadius: 1
         },
         {
           label: "Relative Humidity (%)",
@@ -229,7 +229,7 @@ function initCharts() {
           borderWidth: 2,
           tension: 0.35,
           yAxisID: "yHum",
-          pointRadius: 2
+          pointRadius: 1
         }
       ]
     },
@@ -267,6 +267,8 @@ function initSimulationBaseline() {
   appState.targetMoisture = profile.target;
   appState.maxSafeTemp = profile.maxTemp;
   appState.elapsedSeconds = 0;
+  appState.solarPct = 0.0;
+  appState.pvVoltage = 0.0;
   
   // Clear charts
   appState.historyLabels = [];
@@ -278,12 +280,12 @@ function initSimulationBaseline() {
   // Pre-seed some initial visual points
   for (let i = 10; i >= 0; i--) {
     const timeStr = `${-i * 2}m`;
-    const m = profile.initialM + (i * 0.15);
+    const m = profile.initialM + (i * 0.12);
     appState.historyLabels.push(timeStr);
-    appState.historyMoisture.push(m);
+    appState.historyMoisture.push(parseFloat(m.toFixed(1)));
     appState.historyTarget.push(profile.target);
-    appState.historyTemp.push(34.5 + Math.random() * 2.0);
-    appState.historyHum.push(52.0 - Math.random() * 3.0);
+    appState.historyTemp.push(parseFloat((34.0 + Math.random() * 1.5).toFixed(1)));
+    appState.historyHum.push(parseFloat((50.0 - Math.random() * 2.0).toFixed(1)));
   }
   updateChartsUI();
 }
@@ -341,18 +343,14 @@ function simulateDryingStep() {
   
   appState.elapsedSeconds += 2;
   
-  // Solar diurnal curve oscillation
-  const timeHours = (appState.elapsedSeconds % 7200) / 7200.0;
-  appState.solarPct = Math.max(30.0, Math.min(98.0, 75.0 + Math.sin(timeHours * Math.PI * 2) * 20.0 + (Math.random() * 2 - 1)));
-  appState.pvVoltage = 14.5 + (appState.solarPct / 100.0) * 4.2;
-  appState.batVoltage = 12.4 + (appState.solarPct > 50 ? 0.3 : -0.1);
+  // Solar radiation set to zero reading
+  appState.solarPct = 0.0;
+  appState.pvVoltage = 0.0;
+  appState.batVoltage = 12.5;
   
-  // Temperature rises with solar radiant energy
-  const solarThermalBoost = (appState.solarPct / 100.0) * 11.0;
-  appState.temp = 28.0 + solarThermalBoost + (Math.random() * 0.4 - 0.2);
-  
-  // Humidity inversely related to heat
-  appState.humidity = Math.max(25.0, Math.min(75.0, 58.0 - (solarThermalBoost * 1.8) + (Math.random() * 0.8 - 0.4)));
+  // Base thermal chamber temperature
+  appState.temp = 34.2 + (Math.random() * 0.4 - 0.2);
+  appState.humidity = Math.max(30.0, Math.min(70.0, 48.0 + (Math.random() * 0.6 - 0.3)));
   
   // Active drying decision logic
   if (appState.temp >= appState.maxSafeTemp) {
@@ -367,11 +365,11 @@ function simulateDryingStep() {
   } else {
     appState.systemState = "DRYING";
     appState.fanActive = true;
-    appState.ventAngle = appState.moisture > 20.0 ? 75 : (appState.moisture > 16.0 ? 45 : 30);
+    appState.ventAngle = appState.moisture > 16.0 ? 60 : (appState.moisture > 12.0 ? 45 : 30);
     
     // Gradual moisture evaporation
-    const moistureLoss = (0.012 * (appState.temp / 35.0)) * (appState.fanActive ? 1.0 : 0.2);
-    appState.moisture = Math.max(appState.targetMoisture - 0.2, appState.moisture - moistureLoss);
+    const moistureLoss = (0.010 * (appState.temp / 35.0)) * (appState.fanActive ? 1.0 : 0.2);
+    appState.moisture = Math.max(appState.targetMoisture - 0.1, appState.moisture - moistureLoss);
   }
 }
 
@@ -397,7 +395,7 @@ function mainSystemTick() {
     appState.historyTemp.push(parseFloat(appState.temp.toFixed(1)));
     appState.historyHum.push(parseFloat(appState.humidity.toFixed(1)));
     
-    if (appState.historyLabels.length > 25) {
+    if (appState.historyLabels.length > 20) {
       appState.historyLabels.shift();
       appState.historyMoisture.shift();
       appState.historyTarget.shift();
@@ -432,7 +430,7 @@ function updateUI() {
   // 2. AI Estimated Drying Time
   const remHrs = appState.remainingMins / 60.0;
   DOM.valRemainingHrs.textContent = remHrs >= 0.1 ? remHrs.toFixed(1) : "0.0";
-  DOM.valRemainingMins.textContent = `(~${Math.round(appState.remainingMins)} mins)`;
+  DOM.valRemainingMins.textContent = `(~${Math.round(appState.remainingMins)}m)`;
   
   if (appState.remainingMins > 0) {
     const etaDate = new Date(Date.now() + appState.remainingMins * 60000);
@@ -447,7 +445,7 @@ function updateUI() {
   DOM.valGermHealth.textContent = `${appState.germinationHealth}%`;
   
   if (appState.temp >= appState.maxSafeTemp) {
-    DOM.tempStatusBadge.textContent = "Overheat Protection";
+    DOM.tempStatusBadge.textContent = "Overheat Vent";
     DOM.tempStatusBadge.className = "badge badge-solar";
     DOM.valGermHealth.className = "text-orange";
   } else {
@@ -463,16 +461,16 @@ function updateUI() {
   DOM.valHumidity.textContent = appState.humidity.toFixed(1);
   DOM.humProgressFill.style.width = `${appState.humidity}%`;
   
-  // 5. Solar & Battery
+  // 5. Solar & Battery (Solar Irradiance zero reading)
   DOM.valSolarPct.textContent = Math.round(appState.solarPct);
   DOM.valPvVolt.textContent = `PV: ${appState.pvVoltage.toFixed(1)} V`;
   DOM.valBatVolt.textContent = appState.batVoltage.toFixed(2);
   const soc = Math.min(100, Math.max(20, Math.round(((appState.batVoltage - 11.8) / 1.0) * 100)));
-  DOM.valBatSoc.textContent = `State of Charge: ${soc}%`;
+  DOM.valBatSoc.textContent = `SOC: ${soc}%`;
   
   // 6. Actuators
   if (appState.fanActive) {
-    DOM.valFanStatus.textContent = "ACTIVE (100%)";
+    DOM.valFanStatus.textContent = "ACTIVE";
     DOM.valFanStatus.className = "a-state text-green";
     DOM.fanBladeIcon.classList.add("spinning");
   } else {
@@ -481,7 +479,7 @@ function updateUI() {
     DOM.fanBladeIcon.classList.remove("spinning");
   }
   
-  DOM.valVentAngle.textContent = `${appState.ventAngle}° (Exhaust)`;
+  DOM.valVentAngle.textContent = `${appState.ventAngle}°`;
   DOM.ventAngleVisual.style.transform = `rotate(${appState.ventAngle}deg)`;
   
   // 7. System State Badge
@@ -530,7 +528,7 @@ function bindEventListeners() {
       }
       
       sendSerialCommand(`SET_SEED:${seedKey}`);
-      addAlert(`Loaded ${profile.name} Profile`, `Target Moisture: ${profile.target}% • Safe Max Temp: ${profile.maxTemp}°C`, "info");
+      addAlert(`Loaded ${profile.name} Profile`, `Target: ${profile.target}% • Safe Max Temp: ${profile.maxTemp}°C`, "info");
     });
   });
 
@@ -569,7 +567,7 @@ function bindEventListeners() {
     appState.isSimulating = !appState.isSimulating;
     if (appState.isSimulating) {
       DOM.simToggleText.textContent = "Sim: Active";
-      DOM.connStatusText.textContent = "SIMULATION MODE";
+      DOM.connStatusText.textContent = "SIMULATION";
       DOM.connStatusPill.querySelector(".status-dot").className = "status-dot simulated";
     } else {
       DOM.simToggleText.textContent = "Sim: Paused";
@@ -598,12 +596,12 @@ async function connectUsbSerial() {
     appState.serialConnected = true;
     appState.isSimulating = false;
     DOM.simToggleText.textContent = "Sim: Inactive";
-    DOM.connStatusText.textContent = "ARDUINO USB CONNECTED";
+    DOM.connStatusText.textContent = "ARDUINO USB";
     DOM.connStatusPill.querySelector(".status-dot").className = "status-dot connected";
     DOM.btnConnectSerial.innerHTML = `<i data-lucide="check"></i> <span>Connected</span>`;
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
     
-    addAlert("USB Serial Connected", "Receiving high-frequency telemetry from Arduino Uno (115200 baud).", "info");
+    addAlert("USB Serial Connected", "Receiving telemetry from Arduino Uno (115200 baud).", "info");
     readSerialLoop();
   } catch (err) {
     console.error("Serial connection failed:", err);
@@ -697,7 +695,7 @@ function addAlert(title, message, type = "info") {
   `;
   
   DOM.alertFeedContainer.prepend(alertEl);
-  lucide.createIcons();
+  if (window.lucide) lucide.createIcons();
   
   // Keep last 10 alerts
   while (DOM.alertFeedContainer.children.length > 10) {
