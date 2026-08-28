@@ -545,6 +545,8 @@ void handleSerialCommands() {
     // Preset target moisture and thermal safety limits per crop
     if (seed == "PADDY" || seed == "RICE") {
       targetMoisture = 13.0; maxSafeTemp = 42.0;
+    } else if (seed == "GROUNDNUT" || seed == "PEANUT") {
+      targetMoisture = 9.0;  maxSafeTemp = 36.0;
     } else if (seed == "WHEAT") {
       targetMoisture = 12.0; maxSafeTemp = 40.0;
     } else if (seed == "MAIZE" || seed == "CORN") {
