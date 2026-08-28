@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRAKASHAN AI | Smart Solar Seed Dryer</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#10b981">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="logo.jpg">
+  <!-- Google Fonts & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed:', err));
+      });
+    }
+  </script>
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="brand-logo-container">
+        <img src="logo.jpg" alt="Prakashan AI Logo" class="brand-logo-img">
+      </div>
+      <div>
+        <h1 class="brand-title">PRAKASHAN <span class="ai-badge">AI</span></h1>
+        <p class="brand-subtitle">Drying solutions for global agriculture • Smart Solar Seed Dryer</p>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <div class="connection-status-pill" id="connStatusPill">
+        <span class="status-dot simulated"></span>
+        <span id="connStatusText">SIMULATION MODE</span>
+      </div>
+      
+      <button class="btn btn-secondary" id="btnConnectSerial" title="Connect directly to Arduino Uno via USB">
+        <i data-lucide="usb"></i>
+        <span>Connect USB Serial</span>
+      </button>
+
+      <button class="btn btn-primary" id="btnToggleSim" title="Toggle between real serial & simulated dryer">
+        <i data-lucide="play-circle"></i>
+        <span id="simToggleText">Sim: Active</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Container -->
+  <main class="dashboard-container">
+    
+    <!-- Top System Banner & Seed Profile Selector -->
+    <section class="banner-card">
+      <div class="crop-selection-bar">
+        <div class="crop-header">
+          <i data-lucide="sprout" class="icon-sprout"></i>
+          <div>
+            <h3>Active Seed Crop Profile</h3>
+            <p>Thermal threshold automatically tuned for germination protection</p>
+          </div>
+        </div>
+
+        <div class="seed-btn-group" id="seedButtonGroup">
+          <button class="seed-chip active" data-seed="PADDY" data-target="13.0" data-maxtemp="42.0">
+            🌾 Paddy (Rice) <span class="chip-sub">Target: 13.0%</span>
+          </button>
+          <button class="seed-chip" data-seed="WHEAT" data-target="12.0" data-maxtemp="40.0">
+            🌾 Wheat <span class="chip-sub">Target: 12.0%</span>
+          </button>
+          <button class="seed-chip" data-seed="MAIZE" data-target="13.5" data-maxtemp="43.0">
+            🌽 Maize (Corn) <span class="chip-sub">Target: 13.5%</span>
+          </button>
+          <button class="seed-chip" data-seed="SOYBEAN" data-target="11.0" data-maxtemp="38.0">
+            🌱 Soybean <span class="chip-sub">Target: 11.0%</span>
+          </button>
+          <button class="seed-chip" data-seed="MUSTARD" data-target="8.5" data-maxtemp="36.0">
+            🌿 Mustard <span class="chip-sub">Target: 8.5%</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="state-indicator-badge" id="systemStateBadge">
+        <span class="state-title">SYSTEM STATE</span>
+        <h2 id="systemStateText" class="state-val state-drying">DRYING</h2>
+      </div>
+    </section>
+
+    <!-- Key Metrics Grid -->
+    <section class="metrics-grid">
+      
+      <!-- Metric 1: Seed Moisture (Hero Metric) -->
+      <div class="metric-card hero-card">
+        <div class="card-header">
+          <div class="card-title-wrap">
+            <div class="icon-box icon-moisture"><i data-lucide="droplets"></i></div>
+            <h4>Seed Moisture Content</h4>
+          </div>
+          <span class="badge" id="moistureDeltaBadge">-5.2% to go</span>
+        </div>
+
+        <div class="metric-hero-val">
+          <span id="valMoisture">18.2</span><span class="unit">%</span>
+        </div>
+
+        <div class="progress-bar-container">
+          <div class="progress-labels">
+            <span>Harvest: ~24%</span>
+            <span>Target: <b id="valTargetMoistLabel">13.0%</b></span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="moistureProgressFill" style="width: 58%;"></div>
+          </div>
+        </div>
+
+        <div class="card-footer-info">
+          <span>Equilibrium Moisture (EMC): <b id="valEmc">11.8%</b></span>
+        </div>
+      </div>
+
+      <!-- Metric 2: AI Estimated Remaining Drying Time -->
+      <div class="metric-card ai-card">
+        <div class="card-header">
+          <div class="card-title-wrap">
+            <div class="icon-box icon-ai"><i data-lucide="brain-circuit"></i></div>
+            <h4>AI Estimated Drying Time</h4>
+          </div>
+          <span class="badge badge-ai">Thin-Layer ML</span>
+        </div>
+
+        <div class="metric-hero-val highlight-ai">
+          <span id="valRemainingHrs">2.4</span><span class="unit">HRS</span>
+          <span class="sub-time" id="valRemainingMins">(~144 mins)</span>
+        </div>
+
+        <div class="drying-rate-info">
+          <div class="rate-stat">
+            <span class="stat-label">Drying Velocity</span>
+            <span class="stat-val" id="valDryingRate">1.8% / hr</span>
+          </div>
+          <div class="rate-stat">
+            <span class="stat-label">Efficiency Index</span>
+            <span class="stat-val text-green" id="valEfficiency">94%</span>
+          </div>
+        </div>
+
+        <div class="card-footer-info">
+          <span>Target Completion: <b id="valEtaTimestamp">--:--</b></span>
+        </div>
+      </div>
+
+      <!-- Metric 3: Chamber Temperature -->
+      <div class="metric-card">
+        <div class="card-header">
+          <div class="card-title-wrap">
+            <div class="icon-box icon-temp"><i data-lucide="thermometer"></i></div>
+            <h4>Chamber Temperature</h4>
+          </div>
+          <span class="badge" id="tempStatusBadge">Optimal</span>
+        </div>
+
+        <div class="metric-hero-val">
+          <span id="valTemp">37.4</span><span class="unit">°C</span>
+        </div>
+
+        <div class="range-meter">
+          <div class="range-bar">
+            <div class="safe-zone" style="left: 45%; width: 35%;"></div>
+            <div class="range-pointer" id="tempPointer" style="left: 65%;"></div>
+          </div>
+          <div class="range-labels">
+            <span>Min 25°C</span>
+            <span class="text-orange">Safe Max: <b id="valMaxTempLabel">42°C</b></span>
+          </div>
+        </div>
+
+        <div class="card-footer-info">
+          <span>Germination Vitality: <b id="valGermHealth" class="text-green">100%</b></span>
+        </div>
+      </div>
+
+      <!-- Metric 4: Relative Humidity -->
+      <div class="metric-card">
+        <div class="card-header">
+          <div class="card-title-wrap">
+            <div class="icon-box icon-hum"><i data-lucide="cloud-rain"></i></div>
+            <h4>Chamber Humidity</h4>
+          </div>
+          <span class="badge" id="rhStatusBadge">Good Airflow</span>
+        </div>
+
+        <div class="metric-hero-val">
+          <span id="valHumidity">44.5</span><span class="unit">%</span>
+        </div>
+
+        <div class="progress-bar-container">
+          <div class="progress-track">
+            <div class="progress-fill fill-hum" id="humProgressFill" style="width: 44.5%;"></div>
+          </div>
+        </div>
+
+        <div class="card-footer-info">
+          <span>Venting Potential: <b id="valVentingPot" class="text-green">High (Dry air)</b></span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Solar Power & Actuator Hardware Telemetry Row -->
+    <section class="hardware-telemetry-grid">
+      
+      <!-- Solar & Battery Card -->
+      <div class="telemetry-panel">
+        <div class="panel-header">
+          <div class="card-title-wrap">
+            <div class="icon-box icon-solar"><i data-lucide="sun"></i></div>
+            <h4>Renewable Solar & Battery Power</h4>
+          </div>
+          <span class="badge badge-solar">12V Off-Grid</span>
+        </div>
+
+        <div class="power-stats-row">
+          <div class="power-block">
+            <span class="p-label">Solar Irradiance</span>
+            <div class="p-val-row">
+              <i data-lucide="sun-dim" class="p-icon text-yellow"></i>
+              <span id="valSolarPct" class="p-val">82</span>
+              <span class="p-unit">%</span>
+            </div>
+            <span class="p-sub" id="valPvVolt">PV: 18.2 V</span>
+          </div>
+
+          <div class="power-divider"></div>
+
+          <div class="power-block">
+            <span class="p-label">12V Battery Bank</span>
+            <div class="p-val-row">
+              <i data-lucide="battery-charging" class="p-icon text-green" id="batIcon"></i>
+              <span id="valBatVolt" class="p-val">12.6</span>
+              <span class="p-unit">V</span>
+            </div>
+            <span class="p-sub" id="valBatSoc">State of Charge: 92%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chamber Actuators Card -->
+      <div class="telemetry-panel">
+        <div class="panel-header">
+          <div class="card-title-wrap">
+            <div class="icon-box icon-actuator"><i data-lucide="cog"></i></div>
+            <h4>Active Chamber Actuators</h4>
+          </div>
+          <span class="badge" id="actuatorModeBadge">AI Auto-Drive</span>
+        </div>
+
+        <div class="actuators-row">
+          <div class="actuator-item">
+            <div class="fan-widget">
+              <div class="fan-blade spinning" id="fanBladeIcon">
+                <i data-lucide="fan" class="fan-spin-svg"></i>
+              </div>
+            </div>
+            <div class="actuator-desc">
+              <span class="a-name">DC Blower Fan</span>
+              <span class="a-state text-green" id="valFanStatus">ACTIVE (100%)</span>
+              <span class="a-sub">Relay Pin D8</span>
+            </div>
+          </div>
+
+          <div class="actuator-divider"></div>
+
+          <div class="actuator-item">
+            <div class="vent-gauge-wrap">
+              <div class="vent-gauge-angle" id="ventAngleVisual" style="transform: rotate(45deg);"></div>
+              <i data-lucide="wind" class="vent-icon"></i>
+            </div>
+            <div class="actuator-desc">
+              <span class="a-name">Motorized Vent Flap</span>
+              <span class="a-state" id="valVentAngle">45° (Exhaust)</span>
+              <span class="a-sub">Servo PWM Pin D9</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Real-Time Chart Visualizations -->
+    <section class="charts-grid">
+      
+      <!-- Chart 1: Moisture Decay vs AI Forecast Curve -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <h4>🌾 Seed Moisture Drying Trajectory</h4>
+            <p>Real-time sensed moisture compared with AI thin-layer kinetics forecast</p>
+          </div>
+          <div class="chart-legend-custom">
+            <span class="legend-dot dot-actual"></span> <span>Actual Moisture</span>
+            <span class="legend-dot dot-target"></span> <span>Target Threshold</span>
+          </div>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="moistureChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 2: Chamber Temperature & Humidity -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <h4>🌡 Chamber Environment (Temp & RH)</h4>
+            <p>Micro-climate regulation with critical seed thermal safety limit</p>
+          </div>
+          <div class="chart-legend-custom">
+            <span class="legend-dot dot-temp"></span> <span>Chamber Temp (°C)</span>
+            <span class="legend-dot dot-rh"></span> <span>Humidity (%)</span>
+          </div>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="tempHumChart"></canvas>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Manual Control & Alert Log Row -->
+    <section class="control-alerts-grid">
+      
+      <!-- Interactive System Controls -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="card-title-wrap">
+            <div class="icon-box"><i data-lucide="sliders"></i></div>
+            <h4>Dryer Control Console</h4>
+          </div>
+        </div>
+
+        <div class="control-form">
+          <div class="form-group">
+            <label for="customTargetMoist">Target Moisture Setpoint (%):</label>
+            <div class="input-slider-row">
+              <input type="range" id="targetSlider" min="7.0" max="18.0" step="0.5" value="13.0">
+              <span class="slider-val" id="sliderValDisplay">13.0%</span>
+            </div>
+          </div>
+
+          <div class="button-action-row">
+            <button class="btn btn-success" id="btnStartDryer">
+              <i data-lucide="play"></i> Start Drying
+            </button>
+            <button class="btn btn-warning" id="btnVentFlush">
+              <i data-lucide="wind"></i> Flush Vent
+            </button>
+            <button class="btn btn-danger" id="btnStopDryer">
+              <i data-lucide="square"></i> Emergency Stop
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live AI Alerts & System Events -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="card-title-wrap">
+            <div class="icon-box"><i data-lucide="bell"></i></div>
+            <h4>AI Intelligence & Safety Alerts</h4>
+          </div>
+          <span class="badge badge-normal" id="alertCountBadge">All Systems Normal</span>
+        </div>
+
+        <div class="alert-feed" id="alertFeedContainer">
+          <div class="alert-item alert-info">
+            <i data-lucide="check-circle-2" class="alert-icon"></i>
+            <div class="alert-text">
+              <strong>Prakashan AI Initialized</strong>
+              <p>Thin-layer drying kinetics active. Seed embryo protection enabled.</p>
+              <span class="alert-time">Just now</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand-wrap">
+        <img src="logo.jpg" alt="Prakashan AI" class="footer-logo-img">
+        <span><strong>PRAKASHAN AI</strong> — <em>Drying solutions for global agriculture</em></span>
+      </div>
+      <p class="sub">MSME Agricultural Innovation • Hardware: Arduino Uno R3 • Edge ML Thin-Layer Regressor</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
