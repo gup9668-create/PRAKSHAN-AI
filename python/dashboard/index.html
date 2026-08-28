@@ -2,14 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>PRAKASHAN AI | Smart Solar Seed Dryer</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#10b981">
   <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="logo.jpg">
-  <!-- Fonts & CDN Icons -->
+  
+  <!-- Google Fonts & Lucide Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -18,7 +20,7 @@
 
   <style>
 /* ==========================================================================
-   PRAKASHAN AI - Embedded Modern Agricultural Tech Dashboard Styling
+   PRAKASHAN AI - Ultra-Responsive Mobile-First Dashboard Styling
    ========================================================================== */
 :root {
   --bg-main: #0b0f19;
@@ -46,57 +48,72 @@
   
   --radius-sm: 8px;
   --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-lg: 18px;
   --radius-full: 9999px;
   
-  --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 8px 20px -4px rgba(0, 0, 0, 0.45);
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  overflow-x: hidden;
+  width: 100%;
 }
 
 body {
   font-family: var(--font-main);
   background-color: var(--bg-main);
   color: var(--text-main);
-  line-height: 1.5;
+  line-height: 1.4;
   min-height: 100vh;
+  min-height: -webkit-fill-available;
   display: flex;
   flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* ==========================================================================
+   Navigation Bar (Mobile Optimized)
+   ========================================================================== */
 .navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.85rem 2rem;
-  background: rgba(19, 27, 46, 0.85);
+  padding: 0.75rem 1rem;
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+  background: rgba(19, 27, 46, 0.95);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
   z-index: 100;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .nav-brand {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .brand-logo-container {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 2px solid #f59e0b;
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
   background: #0b1f14;
   flex-shrink: 0;
 }
@@ -109,80 +126,95 @@ body {
 }
 
 .brand-title {
-  font-size: 1.4rem;
+  font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: -0.5px;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
+  line-height: 1.1;
 }
 
 .ai-badge {
   background: linear-gradient(135deg, #8b5cf6, #3b82f6);
   color: white;
-  font-size: 0.75rem;
-  padding: 2px 8px;
+  font-size: 0.65rem;
+  padding: 1px 6px;
   border-radius: var(--radius-full);
   letter-spacing: 0.5px;
-  box-shadow: 0 0 10px var(--accent-ai-glow);
 }
 
 .brand-subtitle {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
 }
 
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.4rem;
+  flex-wrap: nowrap;
 }
 
 .connection-status-pill {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   background: rgba(255, 255, 255, 0.05);
-  padding: 0.4rem 0.85rem;
+  padding: 0.35rem 0.65rem;
   border-radius: var(--radius-full);
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 600;
   border: 1px solid var(--border-color);
+  white-space: nowrap;
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .status-dot.simulated {
   background: var(--solar-amber);
-  box-shadow: 0 0 8px var(--solar-amber);
+  box-shadow: 0 0 6px var(--solar-amber);
 }
 
 .status-dot.connected {
   background: var(--primary);
-  box-shadow: 0 0 8px var(--primary);
+  box-shadow: 0 0 6px var(--primary);
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.85rem;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.78rem;
   font-weight: 600;
   font-family: inherit;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  touch-action: manipulation;
+  min-height: 38px;
+}
+
+.btn:active {
+  transform: scale(0.96);
 }
 
 .btn svg, .btn i {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .btn-primary {
@@ -192,7 +224,6 @@ body {
 
 .btn-primary:hover {
   background: #059669;
-  box-shadow: 0 0 15px var(--primary-glow);
 }
 
 .btn-secondary {
@@ -201,108 +232,116 @@ body {
   border-color: var(--border-color);
 }
 
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
 .btn-success { background: #059669; color: white; }
-.btn-success:hover { background: #10b981; }
-
 .btn-warning { background: #d97706; color: white; }
-.btn-warning:hover { background: #f59e0b; }
-
 .btn-danger { background: #dc2626; color: white; }
-.btn-danger:hover { background: #ef4444; }
 
+/* ==========================================================================
+   Dashboard Container
+   ========================================================================== */
 .dashboard-container {
   flex: 1;
-  padding: 1.75rem 2rem;
-  max-width: 1500px;
+  padding: 0.85rem;
+  max-width: 1400px;
   margin: 0 auto;
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
+/* ==========================================================================
+   Crop Profile Banner & Horizontal Swipeable Chips
+   ========================================================================== */
 .banner-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 1.25rem 1.75rem;
+  padding: 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   box-shadow: var(--shadow-card);
-  gap: 1.5rem;
+  gap: 0.85rem;
   flex-wrap: wrap;
 }
 
 .crop-selection-bar {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.65rem;
+  width: 100%;
 }
 
 .crop-header {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .icon-sprout {
   color: var(--primary);
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .crop-header h3 {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 700;
 }
 
 .crop-header p {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
 }
 
+/* Swipeable seed chip bar for mobile touch screens */
 .seed-btn-group {
   display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.seed-btn-group::-webkit-scrollbar {
+  display: none;
 }
 
 .seed-chip {
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   color: var(--text-main);
-  padding: 0.45rem 0.9rem;
+  padding: 0.45rem 0.8rem;
   border-radius: var(--radius-full);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-height: 36px;
+}
+
+.seed-chip:active {
+  transform: scale(0.96);
 }
 
 .seed-chip .chip-sub {
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 400;
 }
 
-.seed-chip:hover {
-  background: var(--bg-card-hover);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
 .seed-chip.active {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(16, 185, 129, 0.18);
   border-color: var(--primary);
   color: var(--primary);
-  box-shadow: 0 0 12px var(--primary-glow);
+  box-shadow: 0 0 10px var(--primary-glow);
 }
 
 .seed-chip.active .chip-sub {
@@ -312,21 +351,24 @@ body {
 .state-indicator-badge {
   background: var(--bg-input);
   border: 1px solid var(--border-color);
-  padding: 0.75rem 1.5rem;
+  padding: 0.5rem 1rem;
   border-radius: var(--radius-md);
   text-align: right;
-  min-width: 170px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 
 .state-title {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--text-dim);
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .state-val {
-  font-size: 1.4rem;
+  font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: 0.5px;
 }
@@ -336,27 +378,30 @@ body {
 .state-val.state-completed { color: #38bdf8; }
 .state-val.state-alarm_error { color: var(--danger); }
 
+/* ==========================================================================
+   Metrics Grid (Responsive Mobile)
+   ========================================================================== */
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 580px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .metric-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 1.35rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   box-shadow: var(--shadow-card);
-  transition: transform 0.2s ease, border-color 0.2s ease;
-}
-
-.metric-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .metric-card.hero-card {
@@ -372,34 +417,35 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .card-title-wrap {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .card-title-wrap h4 {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-muted);
 }
 
 .icon-box {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
 }
 
 .icon-box svg, .icon-box i {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .icon-moisture { color: #38bdf8; background: rgba(56, 189, 248, 0.15); }
@@ -410,18 +456,18 @@ body {
 .icon-actuator { color: var(--primary); background: rgba(16, 185, 129, 0.15); }
 
 .badge {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-main);
+  white-space: nowrap;
 }
 
 .badge-ai {
   background: rgba(139, 92, 246, 0.2);
   color: #c4b5fd;
-  border: 1px solid rgba(139, 92, 246, 0.3);
 }
 
 .badge-solar {
@@ -430,51 +476,50 @@ body {
 }
 
 .metric-hero-val {
-  font-size: 2.2rem;
+  font-size: clamp(1.75rem, 5vw, 2.1rem);
   font-weight: 800;
   font-family: var(--font-mono);
   display: flex;
   align-items: baseline;
-  gap: 0.3rem;
-  margin: 0.2rem 0 0.8rem 0;
+  gap: 0.25rem;
+  margin: 0.2rem 0 0.5rem 0;
 }
 
 .metric-hero-val .unit {
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: var(--text-dim);
   font-weight: 600;
 }
 
 .metric-hero-val.highlight-ai {
   color: #c4b5fd;
-  text-shadow: 0 0 15px var(--accent-ai-glow);
 }
 
 .sub-time {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
   font-family: var(--font-main);
   font-weight: 500;
-  margin-left: 0.4rem;
+  margin-left: 0.3rem;
 }
 
 .progress-bar-container {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  margin-bottom: 0.85rem;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .progress-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: var(--text-muted);
 }
 
 .progress-track {
   width: 100%;
-  height: 8px;
+  height: 7px;
   background: var(--bg-input);
   border-radius: var(--radius-full);
   overflow: hidden;
@@ -492,12 +537,12 @@ body {
 }
 
 .range-meter {
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.5rem;
 }
 
 .range-bar {
   width: 100%;
-  height: 8px;
+  height: 7px;
   background: var(--bg-input);
   border-radius: var(--radius-full);
   position: relative;
@@ -517,68 +562,73 @@ body {
   width: 6px;
   background: #f97316;
   border-radius: 2px;
-  box-shadow: 0 0 8px #f97316;
+  box-shadow: 0 0 6px #f97316;
   transition: left 0.5s ease;
 }
 
 .range-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: var(--text-muted);
-  margin-top: 0.35rem;
+  margin-top: 0.25rem;
 }
 
 .card-footer-info {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   border-top: 1px solid var(--border-color);
-  padding-top: 0.6rem;
+  padding-top: 0.5rem;
   display: flex;
   justify-content: space-between;
 }
 
 .drying-rate-info {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .rate-stat {
   flex: 1;
   background: var(--bg-input);
-  padding: 0.4rem 0.6rem;
+  padding: 0.35rem 0.5rem;
   border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
 }
 
 .stat-label {
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   color: var(--text-dim);
 }
 
 .stat-val {
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 700;
   font-family: var(--font-mono);
 }
 
+/* ==========================================================================
+   Hardware Telemetry Grid (Solar & Actuators)
+   ========================================================================== */
 .hardware-telemetry-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
+  gap: 0.75rem;
 }
 
-@media (max-width: 900px) {
-  .hardware-telemetry-grid { grid-template-columns: 1fr; }
+@media (max-width: 768px) {
+  .hardware-telemetry-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .telemetry-panel {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 1.25rem 1.5rem;
+  padding: 1rem;
   box-shadow: var(--shadow-card);
 }
 
@@ -586,14 +636,14 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.1rem;
+  margin-bottom: 0.75rem;
 }
 
 .power-stats-row {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .power-block {
@@ -604,37 +654,37 @@ body {
 }
 
 .p-label {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.2rem;
 }
 
 .p-val-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.3rem;
 }
 
 .p-val {
-  font-size: 1.8rem;
+  font-size: 1.45rem;
   font-weight: 800;
   font-family: var(--font-mono);
 }
 
 .p-unit {
-  font-size: 1rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
 }
 
 .p-sub {
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   color: var(--text-dim);
-  margin-top: 0.25rem;
+  margin-top: 0.15rem;
 }
 
 .power-divider, .actuator-divider {
   width: 1px;
-  height: 55px;
+  height: 45px;
   background: var(--border-color);
 }
 
@@ -642,24 +692,25 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .actuator-item {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.65rem;
 }
 
 .fan-widget {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: rgba(16, 185, 129, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(16, 185, 129, 0.3);
+  flex-shrink: 0;
 }
 
 .fan-blade.spinning {
@@ -670,8 +721,8 @@ body {
 }
 
 .fan-spin-svg {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   color: var(--primary);
 }
 
@@ -681,8 +732,8 @@ body {
 }
 
 .vent-gauge-wrap {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: rgba(59, 130, 246, 0.15);
   display: flex;
@@ -690,14 +741,21 @@ body {
   justify-content: center;
   position: relative;
   border: 1px solid rgba(59, 130, 246, 0.3);
+  flex-shrink: 0;
+}
+
+.vent-icon {
+  width: 20px;
+  height: 20px;
+  color: #60a5fa;
 }
 
 .vent-gauge-angle {
   position: absolute;
   width: 2px;
-  height: 20px;
+  height: 16px;
   background: #60a5fa;
-  top: 6px;
+  top: 5px;
   transform-origin: bottom center;
   transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -708,35 +766,40 @@ body {
 }
 
 .a-name {
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   font-weight: 700;
 }
 
 .a-state {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 600;
 }
 
 .a-sub {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--text-dim);
 }
 
+/* ==========================================================================
+   Charts Grid (Touch Optimized)
+   ========================================================================== */
 .charts-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
+  gap: 0.75rem;
 }
 
-@media (max-width: 1000px) {
-  .charts-grid { grid-template-columns: 1fr; }
+@media (max-width: 850px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .chart-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 1.25rem 1.5rem;
+  padding: 1rem;
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
@@ -746,32 +809,32 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .chart-header h4 {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 700;
 }
 
 .chart-header p {
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   color: var(--text-muted);
 }
 
 .chart-legend-custom {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  font-size: 0.72rem;
+  gap: 0.5rem;
+  font-size: 0.68rem;
   color: var(--text-muted);
 }
 
 .legend-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   display: inline-block;
 }
@@ -783,87 +846,99 @@ body {
 
 .chart-wrapper {
   position: relative;
-  height: 240px;
+  height: 200px;
   width: 100%;
 }
 
+/* ==========================================================================
+   Controls & Alerts Grid
+   ========================================================================== */
 .control-alerts-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
+  gap: 0.75rem;
 }
 
-@media (max-width: 900px) {
-  .control-alerts-grid { grid-template-columns: 1fr; }
+@media (max-width: 850px) {
+  .control-alerts-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .panel-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 1.25rem 1.5rem;
+  padding: 1rem;
   box-shadow: var(--shadow-card);
 }
 
 .control-form {
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
-  margin-top: 0.5rem;
+  gap: 0.85rem;
+  margin-top: 0.35rem;
 }
 
 .form-group label {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.35rem;
 }
 
 .input-slider-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .input-slider-row input[type="range"] {
   flex: 1;
   accent-color: var(--primary);
+  height: 8px;
 }
 
 .slider-val {
   font-family: var(--font-mono);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  min-width: 50px;
+  min-width: 46px;
 }
 
 .button-action-row {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.button-action-row .btn {
+  flex: 1;
+  min-width: 90px;
 }
 
 .alert-feed {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  max-height: 160px;
+  gap: 0.5rem;
+  max-height: 140px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .alert-item {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.75rem;
+  gap: 0.5rem;
+  padding: 0.6rem;
   border-radius: var(--radius-md);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   border: 1px solid transparent;
 }
 
 .alert-item svg, .alert-item i {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -892,16 +967,16 @@ body {
 }
 
 .alert-time {
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   color: var(--text-dim);
-  margin-top: 0.2rem;
+  margin-top: 0.15rem;
   display: block;
 }
 
 .footer {
   margin-top: auto;
   border-top: 1px solid var(--border-color);
-  padding: 1.25rem 2rem;
+  padding: 1rem;
   background: rgba(19, 27, 46, 0.6);
   text-align: center;
 }
@@ -910,26 +985,26 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.6rem;
-  margin-bottom: 0.35rem;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .footer-logo-img {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: 1px solid #f59e0b;
 }
 
 .footer-content {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
 }
 
 .footer-content .sub {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: var(--text-dim);
-  margin-top: 0.25rem;
+  margin-top: 0.15rem;
 }
 
 .text-green { color: var(--primary) !important; }
@@ -947,24 +1022,24 @@ body {
       </div>
       <div>
         <h1 class="brand-title">PRAKASHAN <span class="ai-badge">AI</span></h1>
-        <p class="brand-subtitle">Drying solutions for global agriculture • Smart Solar Seed Dryer</p>
+        <p class="brand-subtitle">Drying solutions for global agriculture</p>
       </div>
     </div>
 
     <div class="nav-actions">
       <div class="connection-status-pill" id="connStatusPill">
         <span class="status-dot simulated"></span>
-        <span id="connStatusText">SIMULATION MODE</span>
+        <span id="connStatusText">SIMULATION</span>
       </div>
       
       <button class="btn btn-secondary" id="btnConnectSerial" title="Connect directly to Arduino Uno via USB">
         <i data-lucide="usb"></i>
-        <span>Connect USB Serial</span>
+        <span>USB</span>
       </button>
 
       <button class="btn btn-primary" id="btnToggleSim" title="Toggle between real serial & simulated dryer">
         <i data-lucide="play-circle"></i>
-        <span id="simToggleText">Sim: Active</span>
+        <span id="simToggleText">Sim</span>
       </button>
     </div>
   </header>
@@ -972,43 +1047,43 @@ body {
   <!-- Main Dashboard Container -->
   <main class="dashboard-container">
     
-    <!-- Top System Banner & Seed Profile Selector -->
+    <!-- Top System Banner & Swipeable Seed Profile Selector -->
     <section class="banner-card">
       <div class="crop-selection-bar">
         <div class="crop-header">
           <i data-lucide="sprout" class="icon-sprout"></i>
           <div>
-            <h3>Active Seed Crop Profile</h3>
-            <p>Thermal threshold automatically tuned for germination protection</p>
+            <h3>Active Crop Profile</h3>
+            <p>Thermal threshold automatically tuned for germination vitality</p>
           </div>
         </div>
 
         <div class="seed-btn-group" id="seedButtonGroup">
           <button class="seed-chip active" data-seed="PADDY" data-target="13.0" data-maxtemp="42.0">
-            🌾 Paddy (Rice) <span class="chip-sub">Target: 13.0%</span>
+            🌾 Paddy <span class="chip-sub">13.0%</span>
           </button>
           <button class="seed-chip" data-seed="WHEAT" data-target="12.0" data-maxtemp="40.0">
-            🌾 Wheat <span class="chip-sub">Target: 12.0%</span>
+            🌾 Wheat <span class="chip-sub">12.0%</span>
           </button>
           <button class="seed-chip" data-seed="MAIZE" data-target="13.5" data-maxtemp="43.0">
-            🌽 Maize (Corn) <span class="chip-sub">Target: 13.5%</span>
+            🌽 Maize <span class="chip-sub">13.5%</span>
           </button>
           <button class="seed-chip" data-seed="SOYBEAN" data-target="11.0" data-maxtemp="38.0">
-            🌱 Soybean <span class="chip-sub">Target: 11.0%</span>
+            🌱 Soybean <span class="chip-sub">11.0%</span>
           </button>
           <button class="seed-chip" data-seed="MUSTARD" data-target="8.5" data-maxtemp="36.0">
-            🌿 Mustard <span class="chip-sub">Target: 8.5%</span>
+            🌿 Mustard <span class="chip-sub">8.5%</span>
           </button>
         </div>
       </div>
 
       <div class="state-indicator-badge" id="systemStateBadge">
-        <span class="state-title">SYSTEM STATE</span>
+        <span class="state-title">SYSTEM STATE:</span>
         <h2 id="systemStateText" class="state-val state-drying">DRYING</h2>
       </div>
     </section>
 
-    <!-- Key Metrics Grid -->
+    <!-- Key Metrics Grid (Hero Cards) -->
     <section class="metrics-grid">
       
       <!-- Metric 1: Seed Moisture (Hero Metric) -->
@@ -1016,9 +1091,9 @@ body {
         <div class="card-header">
           <div class="card-title-wrap">
             <div class="icon-box icon-moisture"><i data-lucide="droplets"></i></div>
-            <h4>Seed Moisture Content</h4>
+            <h4>Seed Moisture</h4>
           </div>
-          <span class="badge" id="moistureDeltaBadge">-5.2% to target</span>
+          <span class="badge" id="moistureDeltaBadge">-5.2% to go</span>
         </div>
 
         <div class="metric-hero-val">
@@ -1036,7 +1111,7 @@ body {
         </div>
 
         <div class="card-footer-info">
-          <span>Equilibrium Moisture (EMC): <b id="valEmc">11.8%</b></span>
+          <span>Equilibrium (EMC): <b id="valEmc">11.8%</b></span>
         </div>
       </div>
 
@@ -1045,29 +1120,29 @@ body {
         <div class="card-header">
           <div class="card-title-wrap">
             <div class="icon-box icon-ai"><i data-lucide="brain-circuit"></i></div>
-            <h4>AI Estimated Drying Time</h4>
+            <h4>AI Est. Time</h4>
           </div>
           <span class="badge badge-ai">Thin-Layer ML</span>
         </div>
 
         <div class="metric-hero-val highlight-ai">
           <span id="valRemainingHrs">2.4</span><span class="unit">HRS</span>
-          <span class="sub-time" id="valRemainingMins">(~144 mins)</span>
+          <span class="sub-time" id="valRemainingMins">(~144m)</span>
         </div>
 
         <div class="drying-rate-info">
           <div class="rate-stat">
-            <span class="stat-label">Drying Velocity</span>
-            <span class="stat-val" id="valDryingRate">1.8% / hr</span>
+            <span class="stat-label">Drying Rate</span>
+            <span class="stat-val" id="valDryingRate">1.8%/hr</span>
           </div>
           <div class="rate-stat">
-            <span class="stat-label">Efficiency Index</span>
+            <span class="stat-label">Efficiency</span>
             <span class="stat-val text-green" id="valEfficiency">94%</span>
           </div>
         </div>
 
         <div class="card-footer-info">
-          <span>Target Completion: <b id="valEtaTimestamp">--:--</b></span>
+          <span>ETA: <b id="valEtaTimestamp">--:--</b></span>
         </div>
       </div>
 
@@ -1076,7 +1151,7 @@ body {
         <div class="card-header">
           <div class="card-title-wrap">
             <div class="icon-box icon-temp"><i data-lucide="thermometer"></i></div>
-            <h4>Chamber Temperature</h4>
+            <h4>Chamber Temp</h4>
           </div>
           <span class="badge" id="tempStatusBadge">Safe Zone</span>
         </div>
@@ -1092,12 +1167,12 @@ body {
           </div>
           <div class="range-labels">
             <span>Min 25°C</span>
-            <span class="text-orange">Safe Max: <b id="valMaxTempLabel">42°C</b></span>
+            <span class="text-orange">Max: <b id="valMaxTempLabel">42°C</b></span>
           </div>
         </div>
 
         <div class="card-footer-info">
-          <span>Germination Vitality: <b id="valGermHealth" class="text-green">100%</b></span>
+          <span>Germination Health: <b id="valGermHealth" class="text-green">100%</b></span>
         </div>
       </div>
 
@@ -1106,7 +1181,7 @@ body {
         <div class="card-header">
           <div class="card-title-wrap">
             <div class="icon-box icon-hum"><i data-lucide="cloud-rain"></i></div>
-            <h4>Chamber Humidity</h4>
+            <h4>Humidity</h4>
           </div>
           <span class="badge" id="rhStatusBadge">Good Airflow</span>
         </div>
@@ -1122,7 +1197,7 @@ body {
         </div>
 
         <div class="card-footer-info">
-          <span>Venting Potential: <b id="valVentingPot" class="text-green">High (Dry air)</b></span>
+          <span>Venting Potential: <b id="valVentingPot" class="text-green">High</b></span>
         </div>
       </div>
 
@@ -1136,7 +1211,7 @@ body {
         <div class="panel-header">
           <div class="card-title-wrap">
             <div class="icon-box icon-solar"><i data-lucide="sun"></i></div>
-            <h4>Renewable Solar & Battery Power</h4>
+            <h4>Solar & Battery Power</h4>
           </div>
           <span class="badge badge-solar">12V Off-Grid</span>
         </div>
@@ -1155,13 +1230,13 @@ body {
           <div class="power-divider"></div>
 
           <div class="power-block">
-            <span class="p-label">12V Battery Bank</span>
+            <span class="p-label">12V Battery</span>
             <div class="p-val-row">
               <i data-lucide="battery-charging" class="p-icon text-green" id="batIcon"></i>
               <span id="valBatVolt" class="p-val">12.6</span>
               <span class="p-unit">V</span>
             </div>
-            <span class="p-sub" id="valBatSoc">State of Charge: 92%</span>
+            <span class="p-sub" id="valBatSoc">SOC: 92%</span>
           </div>
         </div>
       </div>
@@ -1171,9 +1246,9 @@ body {
         <div class="panel-header">
           <div class="card-title-wrap">
             <div class="icon-box icon-actuator"><i data-lucide="cog"></i></div>
-            <h4>Active Chamber Actuators</h4>
+            <h4>Active Actuators</h4>
           </div>
-          <span class="badge" id="actuatorModeBadge">AI Auto-Drive</span>
+          <span class="badge" id="actuatorModeBadge">AI Auto</span>
         </div>
 
         <div class="actuators-row">
@@ -1184,9 +1259,9 @@ body {
               </div>
             </div>
             <div class="actuator-desc">
-              <span class="a-name">DC Blower Fan</span>
-              <span class="a-state text-green" id="valFanStatus">ACTIVE (100%)</span>
-              <span class="a-sub">Relay Pin D8</span>
+              <span class="a-name">DC Blower</span>
+              <span class="a-state text-green" id="valFanStatus">ACTIVE</span>
+              <span class="a-sub">Relay D8</span>
             </div>
           </div>
 
@@ -1198,9 +1273,9 @@ body {
               <i data-lucide="wind" class="vent-icon"></i>
             </div>
             <div class="actuator-desc">
-              <span class="a-name">Motorized Vent Flap</span>
-              <span class="a-state" id="valVentAngle">45° (Exhaust)</span>
-              <span class="a-sub">Servo PWM Pin D9</span>
+              <span class="a-name">Exhaust Flap</span>
+              <span class="a-state" id="valVentAngle">45°</span>
+              <span class="a-sub">Servo D9</span>
             </div>
           </div>
         </div>
@@ -1215,12 +1290,12 @@ body {
       <div class="chart-card">
         <div class="chart-header">
           <div>
-            <h4>🌾 Seed Moisture Drying Trajectory</h4>
-            <p>Real-time sensed moisture compared with AI thin-layer kinetics forecast</p>
+            <h4>🌾 Moisture Trajectory</h4>
+            <p>Sensed moisture vs AI forecast</p>
           </div>
           <div class="chart-legend-custom">
-            <span class="legend-dot dot-actual"></span> <span>Actual Moisture</span>
-            <span class="legend-dot dot-target"></span> <span>Target Threshold</span>
+            <span class="legend-dot dot-actual"></span> <span>Actual</span>
+            <span class="legend-dot dot-target"></span> <span>Target</span>
           </div>
         </div>
         <div class="chart-wrapper">
@@ -1232,12 +1307,12 @@ body {
       <div class="chart-card">
         <div class="chart-header">
           <div>
-            <h4>🌡 Chamber Environment (Temp & RH)</h4>
-            <p>Micro-climate regulation with critical seed thermal safety limit</p>
+            <h4>🌡 Environment (Temp & RH)</h4>
+            <p>Micro-climate regulation</p>
           </div>
           <div class="chart-legend-custom">
-            <span class="legend-dot dot-temp"></span> <span>Chamber Temp (°C)</span>
-            <span class="legend-dot dot-rh"></span> <span>Humidity (%)</span>
+            <span class="legend-dot dot-temp"></span> <span>Temp (°C)</span>
+            <span class="legend-dot dot-rh"></span> <span>RH (%)</span>
           </div>
         </div>
         <div class="chart-wrapper">
@@ -1255,7 +1330,7 @@ body {
         <div class="panel-header">
           <div class="card-title-wrap">
             <div class="icon-box"><i data-lucide="sliders"></i></div>
-            <h4>Dryer Control Console</h4>
+            <h4>Dryer Controls</h4>
           </div>
         </div>
 
@@ -1270,13 +1345,13 @@ body {
 
           <div class="button-action-row">
             <button class="btn btn-success" id="btnStartDryer">
-              <i data-lucide="play"></i> Start Drying
+              <i data-lucide="play"></i> Start
             </button>
             <button class="btn btn-warning" id="btnVentFlush">
-              <i data-lucide="wind"></i> Flush Vent
+              <i data-lucide="wind"></i> Flush
             </button>
             <button class="btn btn-danger" id="btnStopDryer">
-              <i data-lucide="square"></i> Emergency Stop
+              <i data-lucide="square"></i> Stop
             </button>
           </div>
         </div>
@@ -1287,17 +1362,17 @@ body {
         <div class="panel-header">
           <div class="card-title-wrap">
             <div class="icon-box"><i data-lucide="bell"></i></div>
-            <h4>AI Intelligence & Safety Alerts</h4>
+            <h4>Safety Alerts</h4>
           </div>
-          <span class="badge badge-normal" id="alertCountBadge">All Systems Normal</span>
+          <span class="badge badge-normal" id="alertCountBadge">Normal</span>
         </div>
 
         <div class="alert-feed" id="alertFeedContainer">
           <div class="alert-item alert-info">
             <i data-lucide="check-circle-2" class="alert-icon"></i>
             <div class="alert-text">
-              <strong>Prakashan AI Initialized</strong>
-              <p>Thin-layer drying kinetics active. Seed embryo protection enabled.</p>
+              <strong>Prakashan AI Active</strong>
+              <p>Thin-layer drying active. Embryo protection enabled.</p>
               <span class="alert-time">Just now</span>
             </div>
           </div>
@@ -1315,7 +1390,7 @@ body {
         <img src="logo.jpg" alt="Prakashan AI" class="footer-logo-img">
         <span><strong>PRAKASHAN AI</strong> — <em>Drying solutions for global agriculture</em></span>
       </div>
-      <p class="sub">MSME Agricultural Innovation • Hardware: Arduino Uno R3 • Edge ML Thin-Layer Regressor</p>
+      <p class="sub">MSME Agricultural Innovation • Arduino Uno R3 • Edge ML Regressor</p>
     </div>
   </footer>
 
