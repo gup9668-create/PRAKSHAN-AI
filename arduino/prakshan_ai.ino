@@ -2,11 +2,11 @@
  ============================================================================
   PRAKASHAN AI - AI-Powered Smart Solar Seed Dryer
   "Drying solutions for global agriculture"
-  ESP32 Hardware Controller Firmware
+  ESP32 Hardware Controller Firmware with DHT22 Sensor Integration
  ============================================================================
   Hardware Pinout Configuration (ESP32 DevKit V1 / NodeMCU-32S):
+  - DHT22 (Temp & Humidity):      GPIO 4  (DHTTYPE DHT22)
   - Soil / Seed Moisture Sensor:  GPIO 34 (ADC1_CH6, 12-bit ADC)
-  - DHT22 (Temp & Humidity):      GPIO 4
   - DC Blower Relay (Fan):        GPIO 26 (Active LOW)
   - Green Status LED (Normal):    GPIO 16
   - Yellow Status LED (Warning):  GPIO 17
@@ -14,11 +14,11 @@
   - Active Buzzer (Alarm):        GPIO 19
   - I2C OLED SSD1306 (128x64):    SDA -> GPIO 21, SCL -> GPIO 22
 
-  Communication & Dashboard Linking:
-  - Real-time JSON Telemetry streaming over USB Serial (115200 baud)
-  - Seamless 2-way link with Prakashan AI Web Dashboard (Web Serial API)
-  - Non-blocking millis() control loop (zero delay freeze)
-  - Crop presets: Paddy (13.0%), Groundnut (9.0%), Maize (13.5%), Soybean (11.0%), Mustard (8.5%)
+  DHT22 Capabilities & Features:
+  - High-precision temperature monitoring: -40.0°C to +80.0°C (±0.5°C accuracy)
+  - Relative humidity monitoring: 0.0% to 100.0% RH (±2% accuracy)
+  - Automatic error detection with OLED "Check Wiring" diagnostic screen
+  - Real-time JSON telemetry streaming for dashboard sync
  ============================================================================
 */
 
@@ -30,8 +30,8 @@
 // ==========================================
 // PIN DEFINITIONS (ESP32)
 // ==========================================
+#define DHT_PIN         4       // DHT22 High-Precision Digital Sensor Pin
 #define SOIL_PIN        34      // Capacitive Seed/Soil Moisture Sensor (ADC)
-#define DHT_PIN         4       // DHT22 Data Pin
 #define RELAY_PIN       26      // DC Blower Relay (Active LOW)
 
 #define GREEN_LED       16      // Green LED: Normal Drying
@@ -46,7 +46,7 @@
 // ==========================================
 // SENSOR & OLED CONFIGURATION
 // ==========================================
-#define DHTTYPE         DHT22
+#define DHTTYPE         DHT22   // Explicitly configured for DHT22 (AM2302)
 #define SCREEN_WIDTH    128
 #define SCREEN_HEIGHT   64
 #define OLED_RESET      -1
@@ -76,11 +76,12 @@ enum SystemState {
 
 SystemState currentState = STATE_DRYING;
 
-// Telemetry Variables
+// Telemetry & DHT22 Health Variables
 float currentTemp       = 0.0;
 float currentHumidity   = 0.0;
 float currentMoisture   = 0.0;
 int   rawSoilADC        = 0;
+bool  dht22Healthy      = true;
 bool  fanState          = false;
 int   ventAngle         = 45;
 bool  buzzerState       = false;
@@ -128,7 +129,7 @@ void setup() {
   setLeds(false, false, false);
   digitalWrite(BUZZER_PIN, LOW);
 
-  // Initialize DHT22
+  // Initialize DHT22 Sensor
   dht.begin();
 
   // Initialize I2C on ESP32 specific pins (SDA=21, SCL=22)
@@ -142,13 +143,13 @@ void setup() {
     
     // Boot Splash Banner
     display.setTextSize(2);
-    display.setCursor(10, 10);
+    display.setCursor(10, 8);
     display.println(F("PRAKASHAN"));
     display.setTextSize(1);
-    display.setCursor(20, 36);
+    display.setCursor(15, 32);
     display.println(F("AI SEED DRYER"));
-    display.setCursor(10, 50);
-    display.println(F("ESP32 Connected"));
+    display.setCursor(10, 48);
+    display.println(F("DHT22 + ESP32 OK"));
     display.display();
   } else {
     Serial.println(F("{\"error\":\"OLED_INIT_FAILED\"}"));
@@ -158,7 +159,7 @@ void setup() {
   dryingStartTime = millis();
   currentState = STATE_DRYING;
 
-  Serial.println(F("{\"system\":\"PRAKASHAN_AI\",\"mcu\":\"ESP32\",\"status\":\"BOOT_COMPLETE\",\"version\":\"2.5\"}"));
+  Serial.println(F("{\"system\":\"PRAKASHAN_AI\",\"sensor\":\"DHT22\",\"mcu\":\"ESP32\",\"status\":\"BOOT_COMPLETE\"}"));
 }
 
 // ==========================================
@@ -194,7 +195,7 @@ void loop() {
 }
 
 // ==========================================
-// SENSOR ACQUISITION & FILTERING
+// SENSOR ACQUISITION (DHT22 + Capacitive Soil)
 // ==========================================
 void readSensors() {
   // Multi-sample 12-bit ADC read on GPIO 34
@@ -212,13 +213,14 @@ void readSensors() {
   float t = dht.readTemperature();
   float h = dht.readHumidity();
 
-  if (!isnan(t) && !isnan(h) && t >= -10.0 && t <= 80.0 && h >= 0.0 && h <= 100.0) {
+  // DHT22 Error Validation
+  if (isnan(t) || isnan(h)) {
+    dht22Healthy = false;
+    Serial.println(F("{\"error\":\"DHT22_READ_FAILED\",\"msg\":\"Check wiring on GPIO 4\"}"));
+  } else {
+    dht22Healthy = true;
     currentTemp     = t;
     currentHumidity = h;
-  } else {
-    // Keep last stable reading or fallback
-    if (currentTemp == 0.0) currentTemp = 32.0;
-    if (currentHumidity == 0.0) currentHumidity = 50.0;
   }
 
   if (currentState == STATE_DRYING || currentState == STATE_VENTILATING) {
@@ -228,7 +230,6 @@ void readSensors() {
 
 // Map ESP32 12-bit ADC (3000 dry -> 1200 wet) to 8% - 30% seed moisture
 float calculateMoisturePercent(int raw) {
-  // Linear interpolation with calibrated bounds
   float pct = ((float)(dryValue - raw) / (float)(dryValue - wetValue)) * 24.0 + 8.0;
   return constrain(pct, 5.0, 45.0);
 }
@@ -237,11 +238,11 @@ float calculateMoisturePercent(int raw) {
 // PRAKASHAN AI DECISION & CONTROL LOGIC
 // ==========================================
 void executeAiControlLogic() {
-  // SAFETY CHECK 1: Sensor Error / Disconnect
-  if (currentTemp < 0.0 || currentTemp > 75.0 || currentMoisture < 3.0 || currentMoisture > 48.0) {
+  // SAFETY CHECK 1: DHT22 or Sensor Disconnect
+  if (!dht22Healthy || currentTemp < 0.0 || currentTemp > 75.0 || currentMoisture < 3.0 || currentMoisture > 48.0) {
     currentState = STATE_ALARM_ERROR;
-    setLeds(false, false, true);
-    digitalWrite(BUZZER_PIN, HIGH);
+    setLeds(false, false, true);    // Red ON
+    digitalWrite(BUZZER_PIN, HIGH);  // Buzzer Alert
     fanState = false;
     return;
   }
@@ -249,9 +250,9 @@ void executeAiControlLogic() {
   // CHECK 2: Target Moisture Reached (Drying Complete)
   if (currentMoisture <= targetMoisture) {
     currentState = STATE_COMPLETED;
-    setLeds(true, false, false);
-    digitalWrite(BUZZER_PIN, LOW);
-    fanState = false;   // Stop fan to prevent over-drying
+    setLeds(true, false, false);    // Green ON
+    digitalWrite(BUZZER_PIN, LOW);   // Buzzer OFF
+    fanState = false;               // Fan OFF (Save energy)
     ventAngle = 10;
     return;
   }
@@ -260,7 +261,7 @@ void executeAiControlLogic() {
   if (currentTemp >= maxSafeTemp || currentHumidity >= maxAmbientHumidity) {
     currentState = STATE_VENTILATING;
     setLeds(false, false, true);    // Red ON
-    digitalWrite(BUZZER_PIN, HIGH);  // Buzzer ON
+    digitalWrite(BUZZER_PIN, HIGH);  // Buzzer Alert
     fanState = true;                // Fan ON (Relay LOW)
     ventAngle = 90;
     return;
@@ -327,6 +328,8 @@ void sendJsonTelemetry() {
   Serial.print(fanState ? 1 : 0);
   Serial.print(F(",\"vent\":"));
   Serial.print(ventAngle);
+  Serial.print(F(",\"dht_ok\":"));
+  Serial.print(dht22Healthy ? 1 : 0);
   Serial.print(F(",\"state\":\""));
   Serial.print(stateStr);
   Serial.print(F("\",\"seed\":\""));
@@ -343,44 +346,58 @@ void updateOledDisplay() {
   display.clearDisplay();
   display.setTextColor(WHITE);
 
+  // If DHT22 has an error, show diagnostic screen
+  if (!dht22Healthy) {
+    display.setTextSize(1);
+    display.setCursor(15, 10);
+    display.println(F("DHT22 SENSOR ERROR"));
+    display.drawLine(0, 22, 127, 22, WHITE);
+    display.setCursor(10, 32);
+    display.println(F("Check Pin GPIO 4"));
+    display.setCursor(10, 46);
+    display.println(F("VCC / GND / Data Wire"));
+    display.display();
+    return;
+  }
+
   // Header Line
   display.setTextSize(1);
   display.setCursor(0, 0);
-  display.print(F("PRAKASHAN AI ["));
+  display.print(F("PRAKASHAN ["));
   display.print(currentSeedType);
   display.println(F("]"));
 
-  display.drawLine(0, 10, 127, 10, WHITE);
+  display.drawLine(0, 9, 127, 9, WHITE);
 
   // Sensor Telemetry
-  display.setCursor(0, 15);
+  display.setCursor(0, 14);
   display.print(F("Moisture: "));
   display.print(currentMoisture, 1);
-  display.print(F("% -> "));
+  display.print(F("% ("));
   display.print((int)targetMoisture);
-  display.println(F("%"));
+  display.println(F("%)"));
 
-  display.setCursor(0, 28);
-  display.print(F("Temp: "));
+  display.setCursor(0, 26);
+  display.print(F("DHT22 Temp: "));
   display.print(currentTemp, 1);
   display.println(F(" C"));
 
-  display.setCursor(0, 41);
-  display.print(F("Humidity: "));
+  display.setCursor(0, 38);
+  display.print(F("DHT22 Hum : "));
   display.print(currentHumidity, 1);
   display.println(F("%"));
 
-  display.setCursor(0, 54);
+  display.setCursor(0, 52);
   display.print(F("Fan: "));
-  display.print(fanState ? F("ON (RUN)") : F("OFF"));
+  display.print(fanState ? F("ON") : F("OFF"));
   
-  display.setCursor(75, 54);
+  display.setCursor(65, 52);
   display.print(F("St: "));
   switch (currentState) {
-    case STATE_DRYING:      display.print(F("DRY")); break;
+    case STATE_DRYING:      display.print(F("DRYING")); break;
     case STATE_VENTILATING: display.print(F("VENT")); break;
     case STATE_COMPLETED:   display.print(F("DONE")); break;
-    case STATE_ALARM_ERROR: display.print(F("ERR")); break;
+    case STATE_ALARM_ERROR: display.print(F("ERROR")); break;
     default:                display.print(F("IDLE")); break;
   }
 
