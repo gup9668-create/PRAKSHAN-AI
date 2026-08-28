@@ -5,29 +5,21 @@
 
 ---
 
-## 1. Complete Pin Configuration Table
+## 1. Complete Pin Configuration Table (ESP32 DevKit V1)
 
-| Arduino Uno Pin | Component | Interface Type | Function / Signal Description |
+| ESP32 Pin (GPIO) | Component | Interface Type | Function / Signal Description |
 | :--- | :--- | :--- | :--- |
-| **D2** | DHT22 (AM2302) | 1-Wire Digital | Chamber Temperature (°C) & Relative Humidity (%) |
-| **D4** | Green LED | Digital Output | Normal Drying Status Indicator (via 330Ω resistor) |
-| **D5** | Yellow LED | Digital Output | High-Temp Exhaust Venting Indicator (via 330Ω) |
-| **D6** | Red LED | Digital Output | Thermal Overheat / Sensor Fault Alarm (via 330Ω) |
-| **D7** | Active Buzzer | Digital Output | Audio Alarm for Critical Safety Limits |
-| **D8** | 5V Relay Module | Digital Output | DC Blower Fan Power Switching (Active LOW) |
-| **D9** | Servo Motor (SG90) | PWM Output (50Hz) | Motorized Exhaust Vent Flap Position (0° to 90°) |
-| **D10** | MicroSD Card Module | SPI (Chip Select) | SD Card CS Pin |
-| **D11** | MicroSD Card Module | SPI (MOSI) | Master Out Slave In |
-| **D12** | MicroSD Card Module | SPI (MISO) | Master In Slave Out |
-| **D13** | MicroSD Card Module | SPI (SCK) | SPI Serial Clock |
-| **A0** | Capacitive Moisture | Analog Input | Seed Bed Moisture Probe (0–5V ADC) |
-| **A1** | LDR Sensor | Analog Input | Ambient Solar Irradiance Voltage Divider |
-| **A2** | Battery Monitor | Analog Input | 12V Battery Voltage Divider (100kΩ / 10kΩ) |
-| **A3** | Solar PV Monitor | Analog Input | Solar Panel Voltage Divider (100kΩ / 10kΩ) |
-| **A4 (SDA)** | I2C OLED (SSD1306) | I2C Data | Real-time LCD/OLED Telemetry Display |
-| **A5 (SCL)** | I2C OLED (SSD1306) | I2C Clock | Real-time LCD/OLED Telemetry Display |
-| **5V / GND** | Logic Power Rail | Power Bus | Powers sensors, OLED, and logic circuits |
-| **VIN / GND** | 12V->5V Buck Output | Power Input | Regulated 5V/7V logic power supply |
+| **GPIO 34 (ADC1_6)** | Soil / Seed Moisture Sensor | 12-bit Analog In | Calibrated Seed Moisture Probe (dry: 3000, wet: 1200) |
+| **GPIO 4** | DHT22 (AM2302) | 1-Wire Digital | Chamber Temperature (°C) & Relative Humidity (%) |
+| **GPIO 26** | 5V Relay Module | Digital Output | DC Blower Fan Power Switching (Active LOW) |
+| **GPIO 16** | Green Status LED | Digital Output | Normal Drying Status Indicator (via 330Ω) |
+| **GPIO 17** | Yellow Status LED | Digital Output | Warning / Fan Active Indicator (via 330Ω) |
+| **GPIO 18** | Red Status LED | Digital Output | Critical Overheat / Fault Alarm (via 330Ω) |
+| **GPIO 19** | Active Buzzer | Digital Output | Audio Alarm for Critical Safety Limits |
+| **GPIO 21 (SDA)** | I2C OLED (SSD1306) | I2C Data | Real-time LCD/OLED Telemetry Display |
+| **GPIO 22 (SCL)** | I2C OLED (SSD1306) | I2C Clock | Real-time LCD/OLED Telemetry Display |
+| **3V3 / 5V (VIN)** | Power Rails | Power Input/Output | Sensors, Relay, OLED Power |
+| **GND** | Ground Rail | Common Ground | Common system ground connection |
 
 ---
 
