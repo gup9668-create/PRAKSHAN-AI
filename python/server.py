@@ -32,11 +32,23 @@ latest_telemetry = {
     "elapsed_s": 3600
 }
 
+# Determine web static directory
+current_script_dir = os.path.dirname(os.path.abspath(__file__))
+candidate_dirs = [
+    os.path.abspath(os.path.join(current_script_dir, "..", "dashboard")),
+    os.path.abspath(os.path.join(current_script_dir, "dashboard")),
+    current_script_dir
+]
+
+static_dir = current_script_dir
+for c_dir in candidate_dirs:
+    if os.path.exists(os.path.join(c_dir, "index.html")):
+        static_dir = c_dir
+        break
+
 class PrakashanHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        # Serve static dashboard files from the dashboard directory
-        dashboard_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dashboard"))
-        super().__init__(*args, directory=dashboard_dir, **kwargs)
+        super().__init__(*args, directory=static_dir, **kwargs)
 
     def do_GET(self):
         if self.path == "/api/telemetry":
@@ -81,8 +93,9 @@ def run_server(port=8080):
     httpd = HTTPServer(server_address, PrakashanHandler)
     print("=================================================================")
     print("  PRAKASHAN AI - Cloud Server & Web Dashboard Running")
-    print(f"  URL: http://localhost:{port}")
-    print("  API: http://localhost:{port}/api/telemetry")
+    print(f"  Serving Static Dir: {static_dir}")
+    print(f"  URL: http://0.0.0.0:{port}")
+    print(f"  API: http://0.0.0.0:{port}/api/telemetry")
     print("=================================================================")
     httpd.serve_forever()
 
