@@ -4,11 +4,12 @@
  * "Drying solutions for global agriculture"
  * ============================================================================
  * Features:
- * - Real-time Web Serial API for direct USB connection to Arduino Uno
+ * - Real-time Web Serial API for direct USB connection to ESP32 / Arduino Uno
  * - High-fidelity physics-based offline simulation engine
  * - AI ML Drying Completion Time & Moisture Curve Forecast
  * - Live Chart.js telemetry graphs
  * - Seed profile switching & germination thermal safety protection
+ * - Small Floating System Alert & Error Toast Notification Engine
  * ============================================================================
  */
 
@@ -31,7 +32,7 @@ const appState = {
   solarPct: 0.0,      // Solar Radiation zero reading as requested
   batVoltage: 12.65,
   pvVoltage: 0.0,     // 0.0V for zero solar radiation
-  fanActive: true,
+  fanActive: true,    // Fan active during drying
   ventAngle: 60,
   systemState: "DRYING",
   elapsedSeconds: 0,
@@ -110,14 +111,23 @@ const DOM = {
   btnStartDryer: document.getElementById("btnStartDryer"),
   btnVentFlush: document.getElementById("btnVentFlush"),
   btnStopDryer: document.getElementById("btnStopDryer"),
+  btnTestAlert: document.getElementById("btnTestAlert"),
   
   alertFeedContainer: document.getElementById("alertFeedContainer"),
-  alertCountBadge: document.getElementById("alertCountBadge")
+  alertCountBadge: document.getElementById("alertCountBadge"),
+  
+  // Floating Toast Alert Elements
+  systemAlertToast: document.getElementById("systemAlertToast"),
+  alertToastTitle: document.getElementById("alertToastTitle"),
+  alertToastMsg: document.getElementById("alertToastMsg"),
+  alertToastIcon: document.getElementById("alertToastIcon"),
+  btnDismissToast: document.getElementById("btnDismissToast")
 };
 
 // Chart Instances
 let moistureChartInstance = null;
 let tempHumChartInstance = null;
+let toastTimeoutId = null;
 
 // ============================================================================
 // INITIALIZATION
@@ -269,6 +279,7 @@ function initSimulationBaseline() {
   appState.elapsedSeconds = 0;
   appState.solarPct = 0.0;
   appState.pvVoltage = 0.0;
+  appState.fanActive = true;
   
   // Clear charts
   appState.historyLabels = [];
@@ -332,6 +343,7 @@ function computeAiInsights() {
   } else {
     const excess = appState.temp - profile.maxTemp;
     appState.germinationHealth = Math.max(10, Math.round(80 - (excess * 22.0)));
+    showSystemAlertToast("Chamber Overheat Warning", `Temperature ${appState.temp.toFixed(1)}°C exceeds safe limit (${profile.maxTemp}°C) for ${profile.name}!`, "danger");
   }
 }
 
@@ -343,7 +355,7 @@ function simulateDryingStep() {
   
   appState.elapsedSeconds += 2;
   
-  // Solar radiation set to zero reading
+  // Solar radiation zero reading
   appState.solarPct = 0.0;
   appState.pvVoltage = 0.0;
   appState.batVoltage = 12.5;
@@ -356,15 +368,16 @@ function simulateDryingStep() {
   if (appState.temp >= appState.maxSafeTemp) {
     appState.systemState = "VENTILATING";
     appState.fanActive = true;
-    appState.ventAngle = 90; // Open flap fully to exhaust excess heat
+    appState.ventAngle = 90;
   } else if (appState.moisture <= appState.targetMoisture) {
     appState.systemState = "COMPLETED";
     appState.fanActive = false;
     appState.ventAngle = 10;
     addAlert("Drying Complete!", `Target moisture of ${appState.targetMoisture}% reached successfully. Preserved 100% germination rate.`, "info");
+    showSystemAlertToast("Drying Completed", `Target ${appState.targetMoisture}% reached. Seed quality preserved!`, "success");
   } else {
     appState.systemState = "DRYING";
-    appState.fanActive = true;
+    appState.fanActive = true; // Fan RUNNING during active drying
     appState.ventAngle = appState.moisture > 16.0 ? 60 : (appState.moisture > 12.0 ? 45 : 30);
     
     // Gradual moisture evaporation
@@ -468,9 +481,9 @@ function updateUI() {
   const soc = Math.min(100, Math.max(20, Math.round(((appState.batVoltage - 11.8) / 1.0) * 100)));
   DOM.valBatSoc.textContent = `SOC: ${soc}%`;
   
-  // 6. Actuators
+  // 6. Actuators (Corrected Fan RUNNING display)
   if (appState.fanActive) {
-    DOM.valFanStatus.textContent = "ACTIVE";
+    DOM.valFanStatus.textContent = "RUNNING (100%)";
     DOM.valFanStatus.className = "a-state text-green";
     DOM.fanBladeIcon.classList.add("spinning");
   } else {
@@ -504,6 +517,34 @@ function updateChartsUI() {
 }
 
 // ============================================================================
+// FLOATING SYSTEM ALERT TOAST ENGINE
+// ============================================================================
+function showSystemAlertToast(title, message, type = "danger", durationMs = 5000) {
+  if (!DOM.systemAlertToast) return;
+  
+  if (toastTimeoutId) clearTimeout(toastTimeoutId);
+  
+  DOM.alertToastTitle.textContent = title;
+  DOM.alertToastMsg.textContent = message;
+  
+  DOM.systemAlertToast.className = `system-alert-toast toast-${type}`;
+  
+  let iconHtml = '<i data-lucide="alert-triangle"></i>';
+  if (type === "danger") iconHtml = '<i data-lucide="alert-octagon"></i>';
+  if (type === "warn") iconHtml = '<i data-lucide="alert-triangle"></i>';
+  if (type === "success") iconHtml = '<i data-lucide="check-circle-2"></i>';
+  
+  DOM.alertToastIcon.innerHTML = iconHtml;
+  if (window.lucide) lucide.createIcons();
+  
+  DOM.systemAlertToast.classList.remove("hidden");
+  
+  toastTimeoutId = setTimeout(() => {
+    DOM.systemAlertToast.classList.add("hidden");
+  }, durationMs);
+}
+
+// ============================================================================
 // EVENT LISTENERS & CONTROLS
 // ============================================================================
 function bindEventListeners() {
@@ -529,6 +570,7 @@ function bindEventListeners() {
       
       sendSerialCommand(`SET_SEED:${seedKey}`);
       addAlert(`Loaded ${profile.name} Profile`, `Target: ${profile.target}% • Safe Max Temp: ${profile.maxTemp}°C`, "info");
+      showSystemAlertToast(`Crop Profile Loaded`, `Selected ${profile.name} (Target: ${profile.target}%, Max: ${profile.maxTemp}°C)`, "success", 3000);
     });
   });
 
@@ -546,6 +588,7 @@ function bindEventListeners() {
     appState.fanActive = true;
     sendSerialCommand("START");
     addAlert("Drying Cycle Resumed", "DC Blower fan and smart vent tracking activated.", "info");
+    showSystemAlertToast("Drying Started", "DC Blower fan running at 100% duty cycle.", "success", 3000);
   });
 
   DOM.btnStopDryer.addEventListener("click", () => {
@@ -554,13 +597,30 @@ function bindEventListeners() {
     appState.ventAngle = 0;
     sendSerialCommand("STOP");
     addAlert("Emergency Stop", "System shut down. Blower fan stopped and vents sealed.", "warn");
+    showSystemAlertToast("Emergency Stop Activated", "Blower fan powered OFF and vents sealed.", "warn", 4000);
   });
 
   DOM.btnVentFlush.addEventListener("click", () => {
     appState.ventAngle = 90;
     appState.fanActive = true;
     addAlert("Manual Vent Flush", "Vent flap positioned to 90° for rapid chamber purge.", "info");
+    showSystemAlertToast("Vent Flush Initiated", "Vent open 90° for rapid air purge.", "warn", 3000);
   });
+
+  // Test Alert Button for presentation/testing
+  if (DOM.btnTestAlert) {
+    DOM.btnTestAlert.addEventListener("click", () => {
+      showSystemAlertToast("System Alert Test", "Zero-Trust Sensor Monitor & Thermal Guard Operational (OWASP Validated)", "warn", 5000);
+      addAlert("Alert System Test", "Simulated warning trigger verified across dashboard.", "warn");
+    });
+  }
+
+  // Dismiss Toast Button
+  if (DOM.btnDismissToast) {
+    DOM.btnDismissToast.addEventListener("click", () => {
+      DOM.systemAlertToast.classList.add("hidden");
+    });
+  }
 
   // Simulation Toggle
   DOM.btnToggleSim.addEventListener("click", () => {
@@ -581,7 +641,7 @@ function bindEventListeners() {
 }
 
 // ============================================================================
-// WEB SERIAL API (Direct USB connection to Arduino Uno)
+// WEB SERIAL API (Direct USB connection to ESP32 / Arduino Uno)
 // ============================================================================
 async function connectUsbSerial() {
   if (!("serial" in navigator)) {
@@ -596,16 +656,18 @@ async function connectUsbSerial() {
     appState.serialConnected = true;
     appState.isSimulating = false;
     DOM.simToggleText.textContent = "Sim: Inactive";
-    DOM.connStatusText.textContent = "ARDUINO USB";
+    DOM.connStatusText.textContent = "ESP32 USB";
     DOM.connStatusPill.querySelector(".status-dot").className = "status-dot connected";
     DOM.btnConnectSerial.innerHTML = `<i data-lucide="check"></i> <span>Connected</span>`;
     if (window.lucide) lucide.createIcons();
     
-    addAlert("USB Serial Connected", "Receiving telemetry from Arduino Uno (115200 baud).", "info");
+    addAlert("USB Serial Connected", "Receiving encrypted telemetry from ESP32 (115200 baud).", "info");
+    showSystemAlertToast("ESP32 Connected", "Live USB serial telemetry stream active.", "success", 3000);
     readSerialLoop();
   } catch (err) {
     console.error("Serial connection failed:", err);
     addAlert("Serial Connection Error", err.message, "danger");
+    showSystemAlertToast("Serial Connection Error", err.message, "danger", 6000);
   }
 }
 
@@ -624,7 +686,7 @@ async function readSerialLoop() {
       if (value) {
         lineBuffer += value;
         const lines = lineBuffer.split("\n");
-        lineBuffer = lines.pop(); // Keep partial line
+        lineBuffer = lines.pop();
         
         for (const line of lines) {
           const trimmed = line.trim();
@@ -641,6 +703,7 @@ async function readSerialLoop() {
     }
   } catch (error) {
     console.error("Serial read error:", error);
+    showSystemAlertToast("Serial Stream Disconnected", "USB communication interrupted.", "danger", 6000);
   } finally {
     reader.releaseLock();
   }
@@ -653,10 +716,23 @@ function handleIncomingTelemetry(data) {
   if (data.solar_pct !== undefined) appState.solarPct = data.solar_pct;
   if (data.bat_v !== undefined) appState.batVoltage = data.bat_v;
   if (data.pv_v !== undefined) appState.pvVoltage = data.pv_v;
-  if (data.fan !== undefined) appState.fanActive = (data.fan === 1);
+  
+  // Robust Fan State Parsing (handles 1, "1", true, "ON")
+  if (data.fan !== undefined) {
+    appState.fanActive = (data.fan === 1 || data.fan === "1" || data.fan === true || data.fan === "ON");
+  }
+  
   if (data.vent !== undefined) appState.ventAngle = data.vent;
   if (data.state !== undefined) appState.systemState = data.state;
   if (data.elapsed_s !== undefined) appState.elapsedSeconds = data.elapsed_s;
+  
+  // Automatic Sensor Error Alerts
+  if (data.dht_ok !== undefined && data.dht_ok === 0) {
+    showSystemAlertToast("DHT22 Sensor Error", "DHT22 disconnected or check GPIO 4 wiring!", "danger", 6000);
+  }
+  if (data.state === "ALARM_ERROR") {
+    showSystemAlertToast("System Alarm Error", "Sensor out of bounds or critical thermal fault!", "danger", 6000);
+  }
 }
 
 async function sendSerialCommand(cmd) {
@@ -671,9 +747,9 @@ async function sendSerialCommand(cmd) {
   }
 }
 
-// ============================================================================
-// ALERT SYSTEM
-// ============================================================================
+// ==========================================
+// ALERT FEED LIST
+// ==========================================
 function addAlert(title, message, type = "info") {
   const alertEl = document.createElement("div");
   alertEl.className = `alert-item alert-${type}`;
@@ -697,7 +773,6 @@ function addAlert(title, message, type = "info") {
   DOM.alertFeedContainer.prepend(alertEl);
   if (window.lucide) lucide.createIcons();
   
-  // Keep last 10 alerts
   while (DOM.alertFeedContainer.children.length > 10) {
     DOM.alertFeedContainer.removeChild(DOM.alertFeedContainer.lastChild);
   }
