@@ -1011,9 +1011,107 @@ body {
 .text-yellow { color: var(--solar-amber) !important; }
 .text-orange { color: #f97316 !important; }
 .text-red { color: var(--danger) !important; }
+
+/* ==========================================================================
+   Small Floating Alert Toast & System Error Bar
+   ========================================================================== */
+.system-alert-toast {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 99999;
+  min-width: 290px;
+  max-width: 420px;
+  background: rgba(19, 27, 46, 0.98);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.8), 0 0 15px rgba(239, 68, 68, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  animation: slideInToast 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.system-alert-toast.hidden {
+  display: none !important;
+}
+@keyframes slideInToast {
+  from { transform: translateY(-30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.system-alert-toast.toast-danger {
+  border-color: #ef4444;
+  background: rgba(28, 14, 20, 0.98);
+}
+.system-alert-toast.toast-warn {
+  border-color: #f59e0b;
+  background: rgba(30, 22, 12, 0.98);
+}
+.system-alert-toast.toast-success {
+  border-color: #10b981;
+  background: rgba(12, 28, 20, 0.98);
+}
+.alert-toast-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.alert-toast-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.toast-danger .alert-toast-icon-wrap { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.toast-warn .alert-toast-icon-wrap { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.toast-success .alert-toast-icon-wrap { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+.alert-toast-body h4 {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+.alert-toast-body p {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+.alert-toast-dismiss {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.alert-toast-dismiss:hover { color: #f8fafc; background: rgba(255,255,255,0.1); }
   </style>
 </head>
 <body>
+  <!-- Floating Small Alert & Error System Toast -->
+  <div id="systemAlertToast" class="system-alert-toast hidden">
+    <div class="alert-toast-content">
+      <div class="alert-toast-icon-wrap" id="alertToastIcon">
+        <i data-lucide="alert-triangle"></i>
+      </div>
+      <div class="alert-toast-body">
+        <h4 id="alertToastTitle">System Alert</h4>
+        <p id="alertToastMsg">Environmental conditions normal.</p>
+      </div>
+    </div>
+    <button class="alert-toast-dismiss" id="btnDismissToast" title="Dismiss Alert">
+      <i data-lucide="x"></i>
+    </button>
+  </div>
+
   <!-- Top Navigation Bar -->
   <header class="navbar">
     <div class="nav-brand">
@@ -1260,8 +1358,8 @@ body {
             </div>
             <div class="actuator-desc">
               <span class="a-name">DC Blower</span>
-              <span class="a-state text-green" id="valFanStatus">ACTIVE</span>
-              <span class="a-sub">Relay D8</span>
+              <span class="a-state text-green font-bold" id="valFanStatus">RUNNING (100%)</span>
+              <span class="a-sub">Relay GPIO 26 / Active LOW</span>
             </div>
           </div>
 
@@ -1352,6 +1450,9 @@ body {
             </button>
             <button class="btn btn-danger" id="btnStopDryer">
               <i data-lucide="square"></i> Stop
+            </button>
+            <button class="btn btn-secondary" id="btnTestAlert" title="Trigger a demonstration alert notification">
+              <i data-lucide="bell-ring"></i> Test Alert
             </button>
           </div>
         </div>
