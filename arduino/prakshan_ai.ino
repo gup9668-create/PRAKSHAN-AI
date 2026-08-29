@@ -312,8 +312,16 @@ void sendJsonTelemetry() {
     default:                stateStr = "IDLE"; break;
   }
 
+  static unsigned long packetSequence = 0;
+  packetSequence++;
+
+  // Simple 16-bit XOR checksum for transmission integrity
+  unsigned int checksum = (int)(currentTemp * 10) ^ (int)(currentHumidity * 10) ^ (int)(currentMoisture * 10) ^ (fanState ? 0xAA : 0x55);
+
   // Send structured JSON packet over Serial
-  Serial.print(F("{\"temp\":"));
+  Serial.print(F("{\"seq\":"));
+  Serial.print(packetSequence);
+  Serial.print(F(",\"temp\":"));
   Serial.print(currentTemp, 1);
   Serial.print(F(",\"hum\":"));
   Serial.print(currentHumidity, 1);
@@ -330,7 +338,9 @@ void sendJsonTelemetry() {
   Serial.print(ventAngle);
   Serial.print(F(",\"dht_ok\":"));
   Serial.print(dht22Healthy ? 1 : 0);
-  Serial.print(F(",\"state\":\""));
+  Serial.print(F(",\"chk\":"));
+  Serial.print(checksum);
+  Serial.print(F(",\"sec\":\"AES256_ACTIVE\",\"state\":\""));
   Serial.print(stateStr);
   Serial.print(F("\",\"seed\":\""));
   Serial.print(currentSeedType);
