@@ -1381,6 +1381,79 @@ body {
 
     </section>
 
+    <!-- Zero-Trust IoT Security & Cryptographic Micro-Firewall Section -->
+    <section class="hardware-telemetry-grid">
+      
+      <!-- Security Shield Card -->
+      <div class="telemetry-panel">
+        <div class="panel-header">
+          <div class="card-title-wrap">
+            <div class="icon-box" style="color: #10b981; background: rgba(16, 185, 129, 0.15);"><i data-lucide="shield-check"></i></div>
+            <h4>Application Micro-Firewall</h4>
+          </div>
+          <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981;">SHIELD ACTIVE</span>
+        </div>
+
+        <div class="power-stats-row">
+          <div class="power-block">
+            <span class="p-label">Firewall Inspection</span>
+            <div class="p-val-row">
+              <i data-lucide="check-circle" class="p-icon text-green"></i>
+              <span id="valSecPackets" class="p-val">100</span>
+              <span class="p-unit">%</span>
+            </div>
+            <span class="p-sub">OWASP Deep Inspection</span>
+          </div>
+
+          <div class="power-divider"></div>
+
+          <div class="power-block">
+            <span class="p-label">Threats Blocked</span>
+            <div class="p-val-row">
+              <i data-lucide="shield-alert" class="p-icon text-green"></i>
+              <span id="valSecThreats" class="p-val">0</span>
+              <span class="p-unit">Threats</span>
+            </div>
+            <span class="p-sub">Rate Limit: 120 RPM</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Encryption & Decryption Card -->
+      <div class="telemetry-panel">
+        <div class="panel-header">
+          <div class="card-title-wrap">
+            <div class="icon-box" style="color: #8b5cf6; background: rgba(139, 92, 246, 0.15);"><i data-lucide="lock"></i></div>
+            <h4>Cryptography Engine</h4>
+          </div>
+          <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid #8b5cf6;">AES-256-CBC</span>
+        </div>
+
+        <div class="power-stats-row">
+          <div class="power-block">
+            <span class="p-label">Cipher Envelope</span>
+            <div class="p-val-row">
+              <i data-lucide="key" class="p-icon" style="color: #c4b5fd;"></i>
+              <span class="p-val" style="font-size: 1.2rem; color: #c4b5fd;">AES-256</span>
+            </div>
+            <span class="p-sub">Zero-Trust Payload Bus</span>
+          </div>
+
+          <div class="power-divider"></div>
+
+          <div class="power-block">
+            <span class="p-label">Message Integrity</span>
+            <div class="p-val-row">
+              <i data-lucide="fingerprint" class="p-icon text-green"></i>
+              <span class="p-val" style="font-size: 1.2rem;">HMAC</span>
+            </div>
+            <span class="p-sub">SHA-256 Signed & Verified</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
   </main>
 
   <!-- Footer -->
