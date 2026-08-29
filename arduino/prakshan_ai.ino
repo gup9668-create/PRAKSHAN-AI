@@ -277,12 +277,12 @@ void executeAiControlLogic() {
     return;
   }
 
-  // CHECK 5: Normal Condition (Optimal Temp < 30°C, RH < 65%)
+  // CHECK 5: Normal Drying Condition (Circulate air & evaporate moisture)
   currentState = STATE_DRYING;
   setLeds(true, false, false);      // Green ON
   digitalWrite(BUZZER_PIN, LOW);     // Buzzer OFF
-  fanState = false;                 // Fan OFF (Relay HIGH)
-  ventAngle = 30;
+  fanState = true;                  // Fan actively ON (Relay LOW) to circulate air
+  ventAngle = 35;
 }
 
 // ==========================================
